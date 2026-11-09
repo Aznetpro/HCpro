@@ -620,7 +620,7 @@ update_from_github() {
     box_mid
     box_line "A atualização recompila os binários."
     box_line "Os serviços podem reiniciar."
-    box_line "Ao terminar, o menu será recarregado automaticamente."
+    box_line "O menu será recarregado ao terminar."
     box_bottom
     echo ""
     read -r -p "Continuar com a atualização? (s/N): " CONFIRM
