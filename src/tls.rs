@@ -72,13 +72,19 @@ fn build_server_config(cert_path: &str, key_path: &str) -> Result<rustls::Server
         .map(Certificate)
         .collect();
 
-    let key_file = std::fs::File::open(key_path)?;
-    let mut key_reader = std::io::BufReader::new(key_file);
-    let key = rustls_pemfile::pkcs8_private_keys(&mut key_reader)?
+    let key_bytes = std::fs::read(key_path)?;
+    let mut pkcs8_reader = std::io::BufReader::new(key_bytes.as_slice());
+    let key = rustls_pemfile::pkcs8_private_keys(&mut pkcs8_reader)?
         .into_iter()
         .next()
+        .or_else(|| {
+            let mut rsa_reader = std::io::BufReader::new(key_bytes.as_slice());
+            rustls_pemfile::rsa_private_keys(&mut rsa_reader)
+                .ok()
+                .and_then(|mut keys| keys.drain(..).next())
+        })
         .map(PrivateKey)
-        .ok_or_else(|| anyhow::anyhow!("nenhuma chave PKCS#8 encontrada em {key_path}"))?;
+        .ok_or_else(|| anyhow::anyhow!("nenhuma chave PKCS#8 ou RSA encontrada em {key_path}"))?;
 
     Ok(rustls::ServerConfig::builder()
         .with_safe_defaults()
