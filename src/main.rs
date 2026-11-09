@@ -135,7 +135,7 @@ async fn handle_multiprotocol_client(
     client_stream: TcpStream,
     status: &str,
     ssh_only: bool,
-    tls_enabled: bool,
+    _tls_enabled: bool,
 ) -> Result<(), Error> {
     let detected = protocol::detect_from_stream(&client_stream).await?;
     println!("[MULTIPROTOCOLO] Detectado: {:?}", detected);
@@ -147,13 +147,11 @@ async fn handle_multiprotocol_client(
         Protocol::Socks5 => socks5::handle_socks5(client_stream)
             .await
             .map_err(|e| Error::new(ErrorKind::Other, format!("SOCKS5: {e}"))),
-        Protocol::Tls if tls_enabled => tls::handle_hcr(client_stream)
+        // Na opção 7, TLS identificado é HCR e não depende da flag antiga
+        // --no-tls usada quando a porta foi criada.
+        Protocol::Tls => tls::handle_hcr(client_stream)
             .await
             .map_err(|e| Error::new(ErrorKind::Other, format!("HCR TLS: {e}"))),
-        Protocol::Tls => Err(Error::new(
-            ErrorKind::InvalidData,
-            "TLS desabilitado nesta porta",
-        )),
         Protocol::WebSocket => websocket::handle_websocket(client_stream, status)
             .await
             .map_err(|e| Error::new(ErrorKind::Other, format!("WebSocket: {e}"))),
