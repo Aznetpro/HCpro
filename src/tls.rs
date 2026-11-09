@@ -1,20 +1,22 @@
+use anyhow::Result;
+use log::info;
 use std::sync::Arc;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::TcpStream;
 use tokio::sync::Mutex;
-use anyhow::Result;
-use log::info;
+use tokio_rustls::rustls::{self, Certificate, PrivateKey};
+use tokio_rustls::TlsAcceptor;
 
-/// Handle TLS connections - passthrough to backend
+/// Handle TLS connections - passthrough to backend.
 pub async fn handle_tls(socket: TcpStream) -> Result<()> {
-    info!("🛡️ TLS detected - passthrough to backend...");
+    info!("TLS detectado - passthrough para backend...");
     socket.set_nodelay(true)?;
 
-    // Tentar SSH primeiro (Porta 22)
+    // Tentar SSH primeiro (Porta 22).
     match TcpStream::connect("127.0.0.1:22").await {
         Ok(remote) => {
             remote.set_nodelay(true)?;
-            info!("✅ TLS -> SSH:22 connected");
+            info!("TLS -> SSH:22 conectado");
             let (cr, cw) = socket.into_split();
             let (sr, sw) = remote.into_split();
             let cr = Arc::new(Mutex::new(cr));
@@ -25,11 +27,11 @@ pub async fn handle_tls(socket: TcpStream) -> Result<()> {
             Ok(())
         }
         Err(_) => {
-            // Se SSH falhar, tentar VPN (Porta 1194)
+            // Se SSH falhar, tentar VPN (Porta 1194).
             match TcpStream::connect("127.0.0.1:1194").await {
                 Ok(remote) => {
                     remote.set_nodelay(true)?;
-                    info!("✅ TLS -> VPN:1194 connected");
+                    info!("TLS -> VPN:1194 conectado");
                     let (cr, cw) = socket.into_split();
                     let (sr, sw) = remote.into_split();
                     let cr = Arc::new(Mutex::new(cr));
@@ -40,12 +42,48 @@ pub async fn handle_tls(socket: TcpStream) -> Result<()> {
                     Ok(())
                 }
                 Err(e) => {
-                    info!("❌ Falha no passthrough TLS: {}", e);
+                    info!("Falha no passthrough TLS: {}", e);
                     Err(e.into())
                 }
             }
         }
     }
+}
+
+/// HCR: termina TLS no Azpro e encaminha o SSH já descriptografado ao sshd.
+/// O cliente pode aceitar o certificado autoassinado quando usa "Allow insecure".
+pub async fn handle_hcr(socket: TcpStream) -> Result<()> {
+    socket.set_nodelay(true)?;
+    let config = build_server_config("/opt/mpro/cert.pem", "/opt/mpro/key.pem")?;
+    let acceptor = TlsAcceptor::from(Arc::new(config));
+    let mut tls_stream = acceptor.accept(socket).await?;
+    let mut ssh = TcpStream::connect("127.0.0.1:22").await?;
+    ssh.set_nodelay(true)?;
+    info!("HCR TLS terminado -> SSH:22 conectado");
+    tokio::io::copy_bidirectional(&mut tls_stream, &mut ssh).await?;
+    Ok(())
+}
+
+fn build_server_config(cert_path: &str, key_path: &str) -> Result<rustls::ServerConfig> {
+    let cert_file = std::fs::File::open(cert_path)?;
+    let mut cert_reader = std::io::BufReader::new(cert_file);
+    let certs = rustls_pemfile::certs(&mut cert_reader)?
+        .into_iter()
+        .map(Certificate)
+        .collect();
+
+    let key_file = std::fs::File::open(key_path)?;
+    let mut key_reader = std::io::BufReader::new(key_file);
+    let key = rustls_pemfile::pkcs8_private_keys(&mut key_reader)?
+        .into_iter()
+        .next()
+        .map(PrivateKey)
+        .ok_or_else(|| anyhow::anyhow!("nenhuma chave PKCS#8 encontrada em {key_path}"))?;
+
+    Ok(rustls::ServerConfig::builder()
+        .with_safe_defaults()
+        .with_no_client_auth()
+        .with_single_cert(certs, key)?)
 }
 
 async fn transfer_data(

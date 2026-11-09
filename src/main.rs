@@ -147,9 +147,9 @@ async fn handle_multiprotocol_client(
         Protocol::Socks5 => socks5::handle_socks5(client_stream)
             .await
             .map_err(|e| Error::new(ErrorKind::Other, format!("SOCKS5: {e}"))),
-        Protocol::Tls if tls_enabled => tls::handle_tls(client_stream)
+        Protocol::Tls if tls_enabled => tls::handle_hcr(client_stream)
             .await
-            .map_err(|e| Error::new(ErrorKind::Other, format!("TLS passthrough: {e}"))),
+            .map_err(|e| Error::new(ErrorKind::Other, format!("HCR TLS: {e}"))),
         Protocol::Tls => Err(Error::new(
             ErrorKind::InvalidData,
             "TLS desabilitado nesta porta",
