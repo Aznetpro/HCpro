@@ -120,19 +120,19 @@ show_active_ports() {
 
     local ports_str=""
     if [ -n "$ACTIVE" ]; then
-        ports_str="${YELLOW}${ACTIVE# }${NC}"
+        ports_str="${AQUA}${ACTIVE# }${NC}"
     fi
     if [ "$XHTTP_ACTIVE" = true ]; then
-        ports_str="${ports_str}${ports_str:+ }${YELLOW}443${NC}"
+        ports_str="${ports_str}${ports_str:+ }${AQUA}443${NC}"
     fi
     if [ "$INTEGRATED_ACTIVE" = true ]; then
-        ports_str="${ports_str}${ports_str:+ }${GREEN}INTEGRADO${NC}"
+        ports_str="${ports_str}${ports_str:+ }${AQUA}INTEGRADO${NC}"
     fi
     if [ -z "$ports_str" ]; then
         ports_str="${RED}nenhuma${NC}"
     fi
 
-    box_line "${YELLOW}Porta(s) ativa(s):${NC} ${ports_str}"
+    box_line "${LIGHT_GREEN}Porta(s) ativa(s):${NC} ${ports_str}"
     if has_any_multiprotocol_enabled; then
         box_line "${CYAN}MULTIPROTOCOLO:${NC} ${LIGHT_GREEN}ATIVO${NC}"
     else
