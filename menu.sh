@@ -610,8 +610,33 @@ manage_special_service() {
     done
 }
 
+run_update_step() {
+    local LABEL="$1"; shift
+    local LOG_FILE PID RESULT FRAME=0
+    local -a FRAMES=('|' '/' '-' '\\')
+    LOG_FILE=$(mktemp /tmp/azpro-update-step.XXXXXX.log) || return 1
+
+    "$@" >"$LOG_FILE" 2>&1 &
+    PID=$!
+    while kill -0 "$PID" 2>/dev/null; do
+        printf '\r\033[2K  %s [%s]' "$LABEL" "${FRAMES[$FRAME]}"
+        FRAME=$(((FRAME + 1) % ${#FRAMES[@]}))
+        sleep 0.15
+    done
+    wait "$PID"
+    RESULT=$?
+    if [[ "$RESULT" -eq 0 ]]; then
+        printf '\r\033[2K  %s [✔]\n' "$LABEL"
+    else
+        printf '\r\033[2K  %s [✘]\n' "$LABEL"
+        sed -n '1,80p' "$LOG_FILE"
+    fi
+    rm -f "$LOG_FILE"
+    return "$RESULT"
+}
+
 update_from_github() {
-    local CONFIRM="" UPDATE_SCRIPT=""
+    local CONFIRM="" UPDATE_SCRIPT="" UPDATE_RESULT=0
     clear
     show_banner
     echo ""
@@ -642,8 +667,7 @@ update_from_github() {
         read -r -p "Enter para continuar..." _
         return
     }
-    echo -e "${CYAN}Baixando instalador mais recente do GitHub...${NC}"
-    if ! curl -fsSL --connect-timeout 15 --max-time 60 \
+    if ! run_update_step "Baixando instalador do GitHub" curl -fsSL --connect-timeout 15 --max-time 60 \
         "https://raw.githubusercontent.com/Lacasx1/Azpro/main/install.sh" \
         -o "$UPDATE_SCRIPT"; then
         rm -f "$UPDATE_SCRIPT"
@@ -652,15 +676,15 @@ update_from_github() {
         return
     fi
 
-    if ! grep -q 'REPO_URL="https://github.com/Lacasx1/Azpro.git"' "$UPDATE_SCRIPT"; then
+    if ! run_update_step "Validando fonte do instalador" grep -q 'REPO_URL="https://github.com/Lacasx1/Azpro.git"' "$UPDATE_SCRIPT"; then
         rm -f "$UPDATE_SCRIPT"
         echo -e "${RED}O arquivo baixado não passou na validação do repositório.${NC}"
         read -r -p "Enter para continuar..." _
         return
     fi
 
-    bash "$UPDATE_SCRIPT"
-    local UPDATE_RESULT=$?
+    run_update_step "Atualizando binários e serviços" bash "$UPDATE_SCRIPT"
+    UPDATE_RESULT=$?
     rm -f "$UPDATE_SCRIPT"
     if [[ $UPDATE_RESULT -eq 0 ]]; then
         echo -e "${GREEN}Atualização concluída.${NC}"
