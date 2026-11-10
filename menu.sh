@@ -404,7 +404,7 @@ manage_multiprotocol() {
         show_banner
         echo ""
         box_top
-        box_line "${WHITE}${BOLD}MULTIPROTOCOLO + STATUS HTTP + TCP${NC}"
+        box_line "${WHITE}${BOLD}MULTIPROTOCOLO + STATUS${NC}"
         box_mid
         if ((${#ACTIVE_PORTS[@]} == 0)); then
             box_line "${YELLOW}Nenhuma porta Azpro ativa.${NC}"
@@ -810,7 +810,7 @@ show_menu() {
     box_line "${WHITE}[04]${NC} ${GREEN}- XHTTP + SSL TUNNEL${NC}"
     box_line "${WHITE}[05]${NC} ${GREEN}- PROTOCOLO INTEGRADO${NC}"
     box_line "${WHITE}[06]${NC} ${GREEN}- ATUALIZAR PELO GITHUB${NC}"
-    box_line "${WHITE}[07]${NC} ${GREEN}- MULTIPROTOCOLO + STATUS + TCP${NC}"
+    box_line "${WHITE}[07]${NC} ${GREEN}- MULTIPROTOCOLO + STATUS${NC}"
     box_line "${RED}[08]${NC} ${GREEN}- DESINSTALAR AZPRO${NC}"
     box_line ""
     box_line "${WHITE}[00]${NC} - SAIR"
