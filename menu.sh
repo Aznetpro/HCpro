@@ -17,6 +17,7 @@ GREEN='\033[0;33m'
 LIGHT_GREEN='\033[1;92m'
 YELLOW='\033[0;33m'
 CYAN='\033[0;36m'
+AQUA='\033[1;36m'
 WHITE='\033[0;37m'
 BLUE='\033[0;34m'
 MAGENTA='\033[0;35m'
@@ -687,7 +688,7 @@ update_from_github() {
     UPDATE_RESULT=$?
     rm -f "$UPDATE_SCRIPT"
     if [[ $UPDATE_RESULT -eq 0 ]]; then
-        echo -e "${GREEN}Atualização concluída.${NC}"
+        echo -e "${AQUA}Atualização concluída.${NC}"
     else
         echo -e "${RED}A atualização falhou; confira as mensagens acima.${NC}"
     fi
