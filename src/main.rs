@@ -12,6 +12,8 @@ mod websocket;
 use protocol::Protocol;
 use std::env;
 use std::io::{Error, ErrorKind};
+#[cfg(target_os = "linux")]
+use std::os::fd::AsRawFd;
 use std::path::Path;
 use std::sync::Arc;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
@@ -86,6 +88,7 @@ async fn start_http(
         match listener.accept().await {
             Ok((client_stream, addr)) => {
                 let _ = client_stream.set_nodelay(true);
+                enable_quickack(&client_stream);
                 let status = status_arc.clone();
                 tokio::spawn(async move {
                     let result = handle_client_protocol(
@@ -251,7 +254,7 @@ async fn handle_multiprotocol_http_tunnel(
 ) -> Result<(), Error> {
     client_stream.set_nodelay(true)?;
     client_stream
-        .write_all(&http_status_response(101, status))
+        .write_all(&http_switching_response())
         .await?;
     client_stream.flush().await?;
 
@@ -277,6 +280,27 @@ fn http_status_response(code: u16, status: &str) -> Vec<u8> {
     format!("HTTP/1.1 {code} {status}\r\n\r\n").into_bytes()
 }
 
+fn http_switching_response() -> Vec<u8> {
+    b"HTTP/1.1 101 Switching Protocols\r\n\r\n".to_vec()
+}
+
+#[cfg(target_os = "linux")]
+fn enable_quickack(stream: &TcpStream) {
+    let value: libc::c_int = 1;
+    unsafe {
+        libc::setsockopt(
+            stream.as_raw_fd(),
+            libc::IPPROTO_TCP,
+            libc::TCP_QUICKACK,
+            &value as *const _ as *const libc::c_void,
+            std::mem::size_of_val(&value) as libc::socklen_t,
+        );
+    }
+}
+
+#[cfg(not(target_os = "linux"))]
+fn enable_quickack(_stream: &TcpStream) {}
+
 // A opção 7 usa a sequência multi-status esperada pelo cliente: o handler já
 // enviou o primeiro 101 e o follow-up completa 101 + 200.
 fn http_handshake_followup(status: &str) -> Vec<u8> {
@@ -294,6 +318,7 @@ async fn relay_to_backend_legacy(mut client_stream: TcpStream, addr: &str) -> Re
         .await
         .map_err(|_| Error::new(ErrorKind::TimedOut, "timeout conectando backend"))??;
     server_stream.set_nodelay(true)?;
+    enable_quickack(&server_stream);
     let _ = relay::copy_bidirectional(&mut client_stream, &mut server_stream).await;
     Ok(())
 }
@@ -404,6 +429,7 @@ async fn relay_to_backend(
         .await
         .map_err(|_| Error::new(ErrorKind::TimedOut, "timeout conectando backend"))??;
     server_stream.set_nodelay(true)?;
+    enable_quickack(&server_stream);
     if !initial_payload.is_empty() {
         server_stream.write_all(initial_payload).await?;
     }
@@ -473,7 +499,8 @@ fn has_arg(arg: &str) -> bool {
 mod tests {
     use super::{
         bypass_enabled_in, find_http_header_end, http_handshake_followup, http_legacy_followup,
-        http_status_response, multiprotocol_enabled_in, strip_http_decoy_prefix,
+        http_status_response, http_switching_response, multiprotocol_enabled_in,
+        strip_http_decoy_prefix,
     };
     use std::path::Path;
 
@@ -507,11 +534,11 @@ mod tests {
 
     #[test]
     fn option_seven_handshake_keeps_multi_status_after_the_initial_101() {
-        let mut handshake = http_status_response(101, "Aznet");
+        let mut handshake = http_switching_response();
         handshake.extend_from_slice(&http_handshake_followup("Aznet"));
         assert_eq!(
             handshake,
-            b"HTTP/1.1 101 Aznet\r\n\r\nHTTP/1.1 101 Aznet\r\n\r\nHTTP/1.1 200 Aznet\r\n\r\n"
+            b"HTTP/1.1 101 Switching Protocols\r\n\r\nHTTP/1.1 101 Aznet\r\n\r\nHTTP/1.1 200 Aznet\r\n\r\n"
         );
     }
 
