@@ -1,5 +1,10 @@
 # Mpro - Changelog
 
+## Próxima versão
+
+- **Servidor HCR por porta** — nova opção [08] no menu para criar, iniciar e remover serviços `hcr-<porta>.service` usando o binário oficial `hcr-server`.
+- A opção valida conflitos de porta e não confunde HCR com o dispatcher multiprotocolo do Azpro.
+
 ## v3.6.0 - Latency Optimized for Low Latency Networks
 
 ### Otimizações de Latência

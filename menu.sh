@@ -11,6 +11,8 @@ BYPASS_DIR="/opt/mpro"
 LEGACY_MULTIPROTOCOL_FLAG="${BYPASS_DIR}/multiprotocol.enabled"
 SYSTEMD_DIR="/etc/systemd/system"
 LANGUAGE_FILE="${BYPASS_DIR}/language"
+HCR_SERVICE_PREFIX="hcr-"
+HCR_BINARY_CANDIDATES=("${BYPASS_DIR}/hcr-server" "/usr/local/bin/hcr-server" "/usr/bin/hcr-server")
 
 # Cores
 RED='\033[0;31m'
@@ -53,6 +55,7 @@ language_text() {
         en:integrated) printf 'INTEGRATED PROTOCOL' ;;
         en:update) printf 'UPDATE FROM GITHUB' ;;
         en:status) printf 'MULTIPROTOCOL + STATUS' ;;
+        en:hcr) printf 'HCR SERVER' ;;
         en:uninstall) printf 'UNINSTALL AZPRO' ;;
         en:language) printf 'LANGUAGE / IDIOMA' ;;
         en:exit) printf 'EXIT' ;;
@@ -85,6 +88,12 @@ language_text() {
         en:special_restart) printf 'RESTART PORT' ;;
         en:special_close) printf 'CLOSE PORT' ;;
         en:choose_action) printf 'Choose an option:' ;;
+        en:hcr_title) printf 'HCR SERVER BY PORT' ;;
+        en:hcr_open) printf 'ENABLE HCR ON A PORT' ;;
+        en:hcr_close) printf 'DISABLE HCR PORT' ;;
+        en:hcr_port_prompt) printf 'HCR port:' ;;
+        en:hcr_no_binary) printf 'Official hcr-server binary not found.' ;;
+        en:hcr_install_hint) printf 'Install it at /opt/mpro/hcr-server, then try again.' ;;
         en:update_title) printf 'Update Azpro from GitHub' ;;
         en:update_rebuild) printf 'The update recompiles the binaries.' ;;
         en:update_restart) printf 'Services may restart.' ;;
@@ -108,6 +117,7 @@ language_text() {
         es:integrated) printf 'PROTOCOLO INTEGRADO' ;;
         es:update) printf 'ACTUALIZAR DESDE GITHUB' ;;
         es:status) printf 'MULTIPROTOCOLO + ESTADO' ;;
+        es:hcr) printf 'SERVIDOR HCR' ;;
         es:uninstall) printf 'DESINSTALAR AZPRO' ;;
         es:language) printf 'IDIOMA / LANGUAGE' ;;
         es:exit) printf 'SALIR' ;;
@@ -140,6 +150,12 @@ language_text() {
         es:special_restart) printf 'REINICIAR PUERTO' ;;
         es:special_close) printf 'CERRAR PUERTO' ;;
         es:choose_action) printf 'Seleccione una opción:' ;;
+        es:hcr_title) printf 'SERVIDOR HCR POR PUERTO' ;;
+        es:hcr_open) printf 'ACTIVAR HCR EN UN PUERTO' ;;
+        es:hcr_close) printf 'DESACTIVAR PUERTO HCR' ;;
+        es:hcr_port_prompt) printf 'Puerto HCR:' ;;
+        es:hcr_no_binary) printf 'No se encontró el binario oficial hcr-server.' ;;
+        es:hcr_install_hint) printf 'Instálelo en /opt/mpro/hcr-server y vuelva a intentar.' ;;
         es:update_title) printf 'Actualizar Azpro desde GitHub' ;;
         es:update_rebuild) printf 'La actualización recompila los binarios.' ;;
         es:update_restart) printf 'Los servicios pueden reiniciarse.' ;;
@@ -163,6 +179,7 @@ language_text() {
         pt-BR:integrated) printf 'PROTOCOLO INTEGRADO' ;;
         pt-BR:update) printf 'ATUALIZAR PELO GITHUB' ;;
         pt-BR:status) printf 'MULTIPROTOCOLO + STATUS' ;;
+        pt-BR:hcr) printf 'SERVIDOR HCR' ;;
         pt-BR:uninstall) printf 'DESINSTALAR AZPRO' ;;
         pt-BR:language) printf 'IDIOMA / LANGUAGE' ;;
         pt-BR:exit) printf 'SAIR' ;;
@@ -195,6 +212,12 @@ language_text() {
         pt-BR:special_restart) printf 'REINICIAR PORTA' ;;
         pt-BR:special_close) printf 'FECHAR PORTA' ;;
         pt-BR:choose_action) printf 'Escolha uma opção:' ;;
+        pt-BR:hcr_title) printf 'SERVIDOR HCR POR PORTA' ;;
+        pt-BR:hcr_open) printf 'ATIVAR HCR EM UMA PORTA' ;;
+        pt-BR:hcr_close) printf 'DESATIVAR PORTA HCR' ;;
+        pt-BR:hcr_port_prompt) printf 'Porta HCR:' ;;
+        pt-BR:hcr_no_binary) printf 'Binário oficial hcr-server não encontrado.' ;;
+        pt-BR:hcr_install_hint) printf 'Instale-o em /opt/mpro/hcr-server e tente novamente.' ;;
         pt-BR:update_title) printf 'Atualizar Azpro pelo GitHub' ;;
         pt-BR:update_rebuild) printf 'A atualização recompila os binários.' ;;
         pt-BR:update_restart) printf 'Os serviços podem reiniciar.' ;;
@@ -628,6 +651,154 @@ manage_multiprotocol() {
             PORT=${ACTIVE_PORTS[$((10#$ACTION - 1))]}
             toggle_port_multiprotocol "$PORT"
         fi
+    done
+}
+
+hcr_binary_path() {
+    local candidate
+    for candidate in "${HCR_BINARY_CANDIDATES[@]}"; do
+        if [[ -x "$candidate" ]]; then
+            printf '%s' "$candidate"
+            return 0
+        fi
+    done
+    return 1
+}
+
+hcr_service_for_port() {
+    printf '%s/%s%s.service' "$SYSTEMD_DIR" "$HCR_SERVICE_PREFIX" "$1"
+}
+
+hcr_port_is_valid() {
+    local port="$1"
+    [[ "$port" =~ ^[0-9]+$ ]] && ((port >= 1 && port <= 65535))
+}
+
+enable_hcr_port() {
+    local LANGUAGE="$(get_language)" PORT BINARY SERVICE_FILE
+    clear
+    show_banner
+    echo ""
+    box_top
+    box_line "${WHITE}${BOLD}$(language_text hcr_open "$LANGUAGE")${NC}"
+    box_mid
+    box_line "${YELLOW}$(language_text hcr_install_hint "$LANGUAGE")${NC}"
+    box_bottom
+    echo ""
+
+    if ! BINARY=$(hcr_binary_path); then
+        echo -e "${RED}$(language_text hcr_no_binary "$LANGUAGE")${NC}"
+        read -r -p "Enter para continuar..." _
+        return
+    fi
+
+    read -r -p "$(language_text hcr_port_prompt "$LANGUAGE") " PORT
+    if ! hcr_port_is_valid "$PORT"; then
+        echo -e "${RED}Porta inválida.${NC}"
+        read -r -p "Enter para continuar..." _
+        return
+    fi
+    SERVICE_FILE=$(hcr_service_for_port "$PORT")
+
+    if systemctl is-active --quiet "proxy-${PORT}.service" 2>/dev/null || \
+       systemctl is-active --quiet "hcr-${PORT}.service" 2>/dev/null || \
+       ss -lntH 2>/dev/null | awk '{print $4}' | grep -Eq ":${PORT}$"; then
+        echo -e "${RED}A porta ${PORT} já está em uso.${NC}"
+        read -r -p "Enter para continuar..." _
+        return
+    fi
+
+    cat > "$SERVICE_FILE" <<EOF
+[Unit]
+Description=HCR Server - Porta ${PORT}
+After=network.target
+Conflicts=proxy-${PORT}.service
+
+[Service]
+Type=simple
+ExecStart=${BINARY} --port ${PORT} --transport plain
+Restart=on-failure
+RestartSec=5
+User=root
+WorkingDirectory=${BYPASS_DIR}
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+    systemctl daemon-reload || { rm -f "$SERVICE_FILE"; read -r -p "Enter para continuar..." _; return; }
+    systemctl enable --now "hcr-${PORT}.service"
+    if systemctl is-active --quiet "hcr-${PORT}.service"; then
+        echo -e "${GREEN}HCR ativado na porta ${PORT}.${NC}"
+    else
+        echo -e "${RED}Falha ao iniciar hcr-${PORT}.service. Veja: journalctl -u hcr-${PORT}.service -n 50${NC}"
+    fi
+    read -r -p "Enter para continuar..." _
+}
+
+disable_hcr_port() {
+    local LANGUAGE="$(get_language)" SERVICE_FILE PORT CHOICE INDEX=0
+    local -a ACTIVE_HCR_PORTS=()
+    for SERVICE_FILE in "${SYSTEMD_DIR}"/${HCR_SERVICE_PREFIX}*.service; do
+        [[ -f "$SERVICE_FILE" ]] || continue
+        PORT=$(basename "$SERVICE_FILE" .service)
+        PORT=${PORT#${HCR_SERVICE_PREFIX}}
+        hcr_port_is_valid "$PORT" || continue
+        systemctl is-active --quiet "hcr-${PORT}.service" 2>/dev/null || continue
+        ACTIVE_HCR_PORTS+=("$PORT")
+    done
+    if ((${#ACTIVE_HCR_PORTS[@]} == 0)); then
+        echo -e "${YELLOW}Nenhuma porta HCR ativa.${NC}"
+        read -r -p "Enter para continuar..." _
+        return
+    fi
+    mapfile -t ACTIVE_HCR_PORTS < <(printf '%s\n' "${ACTIVE_HCR_PORTS[@]}" | sort -n)
+    clear
+    show_banner
+    echo ""
+    box_top
+    box_line "${WHITE}${BOLD}$(language_text hcr_close "$LANGUAGE")${NC}"
+    box_mid
+    for ((INDEX=0; INDEX<${#ACTIVE_HCR_PORTS[@]}; INDEX++)); do
+        printf -v CHOICE '%02d' "$((INDEX + 1))"
+        box_line "${WHITE}[${CHOICE}]${NC} HCR - ${ACTIVE_HCR_PORTS[$INDEX]}"
+    done
+    box_line "${WHITE}[00]${NC} - $(language_text back "$LANGUAGE")"
+    box_bottom
+    echo ""
+    read -r -p "$(language_text select_port "$LANGUAGE") " CHOICE
+    [[ "$CHOICE" == "00" || "$CHOICE" == "0" || -z "$CHOICE" ]] && return
+    if [[ "$CHOICE" =~ ^[0-9]+$ ]] && ((10#$CHOICE >= 1 && 10#$CHOICE <= ${#ACTIVE_HCR_PORTS[@]})); then
+        PORT=${ACTIVE_HCR_PORTS[$((10#$CHOICE - 1))]}
+        systemctl disable --now "hcr-${PORT}.service"
+        rm -f -- "$(hcr_service_for_port "$PORT")"
+        systemctl daemon-reload
+        echo -e "${GREEN}HCR desativado na porta ${PORT}.${NC}"
+    fi
+    read -r -p "Enter para continuar..." _
+}
+
+manage_hcr() {
+    local LANGUAGE ACTION
+    while true; do
+        LANGUAGE="$(get_language)"
+        clear
+        show_banner
+        echo ""
+        box_top
+        box_line "${WHITE}${BOLD}$(language_text hcr_title "$LANGUAGE")${NC}"
+        box_mid
+        box_line "${WHITE}[01]${NC} - $(language_text hcr_open "$LANGUAGE")"
+        box_line "${WHITE}[02]${NC} - $(language_text hcr_close "$LANGUAGE")"
+        box_line "${WHITE}[00]${NC} - $(language_text back "$LANGUAGE")"
+        box_bottom
+        echo ""
+        read -r -p "$(language_text choose "$LANGUAGE") " ACTION
+        case "$ACTION" in
+            01|1) enable_hcr_port ;;
+            02|2) disable_hcr_port ;;
+            00|0|"") return ;;
+        esac
     done
 }
 
@@ -1094,8 +1265,9 @@ show_menu() {
     box_line "${WHITE}[05]${NC} ${GREEN}- $(language_text integrated "$LANGUAGE")${NC}"
     box_line "${WHITE}[06]${NC} ${GREEN}- $(language_text update "$LANGUAGE")${NC}"
     box_line "${WHITE}[07]${NC} ${GREEN}- $(language_text status "$LANGUAGE")${NC}"
-    box_line "${RED}[08]${NC} ${GREEN}- $(language_text uninstall "$LANGUAGE")${NC}"
-    box_line "${WHITE}[09]${NC} ${GREEN}- $(language_text language "$LANGUAGE")${NC}"
+    box_line "${WHITE}[08]${NC} ${GREEN}- $(language_text hcr "$LANGUAGE")${NC}"
+    box_line "${RED}[09]${NC} ${GREEN}- $(language_text uninstall "$LANGUAGE")${NC}"
+    box_line "${WHITE}[10]${NC} ${GREEN}- $(language_text language "$LANGUAGE")${NC}"
     box_line ""
     box_line "${WHITE}[00]${NC} - $(language_text exit "$LANGUAGE")"
     box_bottom
@@ -1114,8 +1286,9 @@ while true; do
         05|5) manage_special_service "PROTOCOLO INTEGRADO" "proxy-integrated.service" open_integrated ;;
         06|6) update_from_github ;;
         07|7) manage_multiprotocol ;;
-        08|8) uninstall_proxy ;;
-        09|9) language_menu ;;
+        08|8) manage_hcr ;;
+        09|9) uninstall_proxy ;;
+        10) language_menu ;;
         00|0) echo "👋 Saindo..."; exit 0 ;;
         *) sleep 1 ;;
     esac
