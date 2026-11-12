@@ -4,8 +4,14 @@ use std::sync::Arc;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::TcpStream;
 use tokio::sync::Mutex;
+use tokio::time::{timeout, Duration};
 use tokio_rustls::rustls::{self, Certificate, PrivateKey};
 use tokio_rustls::TlsAcceptor;
+
+const HCR_CERT_PATH: &str = "/opt/mpro/cert.pem";
+const HCR_KEY_PATH: &str = "/opt/mpro/key.pem";
+const HCR_HANDSHAKE_TIMEOUT: Duration = Duration::from_secs(10);
+const HCR_BACKEND_CONNECT_TIMEOUT: Duration = Duration::from_secs(3);
 
 /// Handle TLS connections - passthrough to backend.
 pub async fn handle_tls(socket: TcpStream) -> Result<()> {
@@ -54,10 +60,17 @@ pub async fn handle_tls(socket: TcpStream) -> Result<()> {
 /// O cliente pode aceitar o certificado autoassinado quando usa "Allow insecure".
 pub async fn handle_hcr(socket: TcpStream) -> Result<()> {
     socket.set_nodelay(true)?;
-    let config = build_server_config("/opt/mpro/cert.pem", "/opt/mpro/key.pem")?;
+    let config = build_server_config(HCR_CERT_PATH, HCR_KEY_PATH)?;
     let acceptor = TlsAcceptor::from(Arc::new(config));
-    let mut tls_stream = acceptor.accept(socket).await?;
-    let mut ssh = TcpStream::connect("127.0.0.1:22").await?;
+    let mut tls_stream = timeout(HCR_HANDSHAKE_TIMEOUT, acceptor.accept(socket))
+        .await
+        .map_err(|_| anyhow::anyhow!("timeout no handshake TLS do HCR"))??;
+    let mut ssh = timeout(
+        HCR_BACKEND_CONNECT_TIMEOUT,
+        TcpStream::connect("127.0.0.1:22"),
+    )
+    .await
+    .map_err(|_| anyhow::anyhow!("timeout conectando ao sshd em 127.0.0.1:22"))??;
     ssh.set_nodelay(true)?;
     info!("HCR TLS terminado -> SSH:22 conectado");
     tokio::io::copy_bidirectional(&mut tls_stream, &mut ssh).await?;
@@ -71,6 +84,11 @@ fn build_server_config(cert_path: &str, key_path: &str) -> Result<rustls::Server
         .into_iter()
         .map(Certificate)
         .collect();
+    if certs.is_empty() {
+        return Err(anyhow::anyhow!(
+            "nenhum certificado X.509 encontrado em {cert_path}"
+        ));
+    }
 
     let key_bytes = std::fs::read(key_path)?;
     let mut pkcs8_reader = std::io::BufReader::new(key_bytes.as_slice());
@@ -83,8 +101,16 @@ fn build_server_config(cert_path: &str, key_path: &str) -> Result<rustls::Server
                 .ok()
                 .and_then(|mut keys| keys.drain(..).next())
         })
+        .or_else(|| {
+            let mut ec_reader = std::io::BufReader::new(key_bytes.as_slice());
+            rustls_pemfile::ec_private_keys(&mut ec_reader)
+                .ok()
+                .and_then(|mut keys| keys.drain(..).next())
+        })
         .map(PrivateKey)
-        .ok_or_else(|| anyhow::anyhow!("nenhuma chave PKCS#8 ou RSA encontrada em {key_path}"))?;
+        .ok_or_else(|| {
+            anyhow::anyhow!("nenhuma chave PKCS#8, RSA ou EC encontrada em {key_path}")
+        })?;
 
     Ok(rustls::ServerConfig::builder()
         .with_safe_defaults()
