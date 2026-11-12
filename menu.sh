@@ -57,6 +57,45 @@ language_text() {
         en:language) printf 'LANGUAGE / IDIOMA' ;;
         en:exit) printf 'EXIT' ;;
         en:choose) printf 'Choose an option:' ;;
+        en:open_title) printf 'Open Port' ;;
+        en:default_ports) printf 'Default ports: 80, 8080, 8880, 3128' ;;
+        en:port443_hint) printf 'Port 443: use option [04] PROXY + PROTOCOL' ;;
+        en:port_prompt) printf 'Port:' ;;
+        en:https_prompt) printf 'Enable HTTPS/TLS? (y/n):' ;;
+        en:http_status_prompt) printf 'HTTP status (Default: @Azpro):' ;;
+        en:xhttp_title) printf 'xHTTP_SSH / SSL TUNNEL - Port 443' ;;
+        en:status_name_prompt) printf 'HTTP status name:' ;;
+        en:integrated_title) printf 'CURRENT CONFIGURATION' ;;
+        en:port_label) printf 'Port:' ;;
+        en:subnet_label) printf 'Subnet:' ;;
+        en:tun_label) printf 'TUN interface:' ;;
+        en:protocols_label) printf 'Protocols:' ;;
+        en:enable_udp_prompt) printf 'Enable UDP on the same port? (y/N)' ;;
+        en:enable_quic_prompt) printf 'Enable QUIC? (y/N)' ;;
+        en:quic_port_prompt) printf 'QUIC port (Enter for 8001):' ;;
+        en:status_http_prompt) printf 'HTTP status name:' ;;
+        en:back) printf 'BACK' ;;
+        en:select_port) printf 'Select port:' ;;
+        en:restart_title) printf 'Restart open port' ;;
+        en:close_title) printf 'Close open port' ;;
+        en:choose_port_restart) printf 'Choose port to restart:' ;;
+        en:choose_port_close) printf 'Choose port to close:' ;;
+        en:no_active) printf 'No active Azpro service.' ;;
+        en:special_open) printf 'OPEN / CONFIGURE' ;;
+        en:special_restart) printf 'RESTART PORT' ;;
+        en:special_close) printf 'CLOSE PORT' ;;
+        en:choose_action) printf 'Choose an option:' ;;
+        en:update_title) printf 'Update Azpro from GitHub' ;;
+        en:update_rebuild) printf 'The update recompiles the binaries.' ;;
+        en:update_restart) printf 'Services may restart.' ;;
+        en:update_reload) printf 'The menu will reload when finished.' ;;
+        en:update_confirm) printf 'Continue with the update? (y/N):' ;;
+        en:uninstall_title) printf 'UNINSTALL Azpro' ;;
+        en:uninstall_desc1) printf 'Stops services and removes proxy binaries.' ;;
+        en:uninstall_desc2) printf 'Removes TLS certificates from /opt/mpro.' ;;
+        en:uninstall_desc3) printf 'Preserves SSH, Rust, OpenSSL and other files.' ;;
+        en:confirm_yes) printf 'To uninstall, type: y' ;;
+        en:confirm_no) printf 'To cancel, type: n' ;;
         es:running) printf 'EN EJECUCIÓN' ;;
         es:active_ports) printf 'Puerto(s) activo(s):' ;;
         es:multiprotocol) printf 'MULTIPROTOCOLO:' ;;
@@ -73,6 +112,45 @@ language_text() {
         es:language) printf 'IDIOMA / LANGUAGE' ;;
         es:exit) printf 'SALIR' ;;
         es:choose) printf 'Seleccione una opción:' ;;
+        es:open_title) printf 'Abrir puerto' ;;
+        es:default_ports) printf 'Puertos predeterminados: 80, 8080, 8880, 3128' ;;
+        es:port443_hint) printf 'Puerto 443: use la opción [04] PROXY + PROTOCOLO' ;;
+        es:port_prompt) printf 'Puerto:' ;;
+        es:https_prompt) printf '¿Activar HTTPS/TLS? (s/n):' ;;
+        es:http_status_prompt) printf 'Estado HTTP (Predeterminado: @Azpro):' ;;
+        es:xhttp_title) printf 'xHTTP_SSH / TÚNEL SSL - Puerto 443' ;;
+        es:status_name_prompt) printf 'Nombre del estado HTTP:' ;;
+        es:integrated_title) printf 'CONFIGURACIÓN ACTUAL' ;;
+        es:port_label) printf 'Puerto:' ;;
+        es:subnet_label) printf 'Subred:' ;;
+        es:tun_label) printf 'Interfaz TUN:' ;;
+        es:protocols_label) printf 'Protocolos:' ;;
+        es:enable_udp_prompt) printf '¿Activar UDP en el mismo puerto? (s/N)' ;;
+        es:enable_quic_prompt) printf '¿Activar QUIC? (s/N)' ;;
+        es:quic_port_prompt) printf 'Puerto QUIC (Enter para 8001):' ;;
+        es:status_http_prompt) printf 'Nombre del estado HTTP:' ;;
+        es:back) printf 'VOLVER' ;;
+        es:select_port) printf 'Seleccione el puerto:' ;;
+        es:restart_title) printf 'Reiniciar puerto abierto' ;;
+        es:close_title) printf 'Cerrar puerto abierto' ;;
+        es:choose_port_restart) printf 'Elija el puerto para reiniciar:' ;;
+        es:choose_port_close) printf 'Elija el puerto para cerrar:' ;;
+        es:no_active) printf 'Ningún servicio Azpro activo.' ;;
+        es:special_open) printf 'ABRIR / CONFIGURAR' ;;
+        es:special_restart) printf 'REINICIAR PUERTO' ;;
+        es:special_close) printf 'CERRAR PUERTO' ;;
+        es:choose_action) printf 'Seleccione una opción:' ;;
+        es:update_title) printf 'Actualizar Azpro desde GitHub' ;;
+        es:update_rebuild) printf 'La actualización recompila los binarios.' ;;
+        es:update_restart) printf 'Los servicios pueden reiniciarse.' ;;
+        es:update_reload) printf 'El menú se recargará al terminar.' ;;
+        es:update_confirm) printf '¿Continuar con la actualización? (s/N):' ;;
+        es:uninstall_title) printf 'DESINSTALAR Azpro' ;;
+        es:uninstall_desc1) printf 'Detiene servicios y elimina binarios del proxy.' ;;
+        es:uninstall_desc2) printf 'Elimina certificados TLS de /opt/mpro.' ;;
+        es:uninstall_desc3) printf 'Conserva SSH, Rust, OpenSSL y otros archivos.' ;;
+        es:confirm_yes) printf 'Para desinstalar, escriba: s' ;;
+        es:confirm_no) printf 'Para cancelar, escriba: n' ;;
         pt-BR:running) printf 'EM EXECUÇÃO' ;;
         pt-BR:active_ports) printf 'Porta(s) ativa(s):' ;;
         pt-BR:multiprotocol) printf 'MULTIPROTOCOLO:' ;;
@@ -89,8 +167,51 @@ language_text() {
         pt-BR:language) printf 'IDIOMA / LANGUAGE' ;;
         pt-BR:exit) printf 'SAIR' ;;
         pt-BR:choose) printf 'Escolha uma opção:' ;;
+        pt-BR:open_title) printf 'Abrir Porta' ;;
+        pt-BR:default_ports) printf 'Portas padrão: 80, 8080, 8880, 3128' ;;
+        pt-BR:port443_hint) printf 'Porta 443: use opção [04] PROXY + PROTOCOLO' ;;
+        pt-BR:port_prompt) printf 'Porta:' ;;
+        pt-BR:https_prompt) printf 'Habilitar o HTTPS/TLS? (s/n):' ;;
+        pt-BR:http_status_prompt) printf 'Status HTTP (Padrão: @Azpro):' ;;
+        pt-BR:xhttp_title) printf 'xHTTP_SSH / SSL TUNNEL - Porta 443' ;;
+        pt-BR:status_name_prompt) printf 'Nome do status HTTP:' ;;
+        pt-BR:integrated_title) printf 'CONFIGURAÇÕES ATUAIS' ;;
+        pt-BR:port_label) printf 'Porta:' ;;
+        pt-BR:subnet_label) printf 'Sub-rede:' ;;
+        pt-BR:tun_label) printf 'Interface TUN:' ;;
+        pt-BR:protocols_label) printf 'Protocolos:' ;;
+        pt-BR:enable_udp_prompt) printf 'Deseja ativar UDP na mesma porta? (s/N)' ;;
+        pt-BR:enable_quic_prompt) printf 'Deseja ativar QUIC? (s/N)' ;;
+        pt-BR:quic_port_prompt) printf 'Porta para QUIC (Enter para 8001):' ;;
+        pt-BR:status_http_prompt) printf 'Nome do status HTTP:' ;;
+        pt-BR:back) printf 'VOLTAR' ;;
+        pt-BR:select_port) printf 'Selecione a porta:' ;;
+        pt-BR:restart_title) printf 'Reiniciar porta aberta' ;;
+        pt-BR:close_title) printf 'Fechar porta aberta' ;;
+        pt-BR:choose_port_restart) printf 'Escolha a porta para reiniciar:' ;;
+        pt-BR:choose_port_close) printf 'Escolha a porta para fechar:' ;;
+        pt-BR:no_active) printf 'Nenhum serviço Azpro ativo.' ;;
+        pt-BR:special_open) printf 'ABRIR / CONFIGURAR' ;;
+        pt-BR:special_restart) printf 'REINICIAR PORTA' ;;
+        pt-BR:special_close) printf 'FECHAR PORTA' ;;
+        pt-BR:choose_action) printf 'Escolha uma opção:' ;;
+        pt-BR:update_title) printf 'Atualizar Azpro pelo GitHub' ;;
+        pt-BR:update_rebuild) printf 'A atualização recompila os binários.' ;;
+        pt-BR:update_restart) printf 'Os serviços podem reiniciar.' ;;
+        pt-BR:update_reload) printf 'O menu será recarregado ao terminar.' ;;
+        pt-BR:update_confirm) printf 'Continuar com a atualização? (s/N):' ;;
+        pt-BR:uninstall_title) printf 'DESINSTALAR Azpro' ;;
+        pt-BR:uninstall_desc1) printf 'Para serviços e remove binários do proxy.' ;;
+        pt-BR:uninstall_desc2) printf 'Remove certificados TLS de /opt/mpro.' ;;
+        pt-BR:uninstall_desc3) printf 'Preserva SSH, Rust, OpenSSL e demais arquivos.' ;;
+        pt-BR:confirm_yes) printf 'Para desinstalar, digite: s' ;;
+        pt-BR:confirm_no) printf 'Para cancelar, digite: n' ;;
         *) printf '%s' "$KEY" ;;
     esac
+}
+
+is_yes() {
+    [[ "$1" =~ ^[sSyY]$ ]]
 }
 
 strip_len() {
@@ -262,33 +383,36 @@ EOF
 }
 
 open_port() {
+    local LANGUAGE="$(get_language)"
     clear
     show_banner
     echo ""
     box_top
-    box_line "${WHITE}${BOLD}Abrir Porta${NC}"
+    box_line "${WHITE}${BOLD}$(language_text open_title "$LANGUAGE")${NC}"
     box_mid
-    box_line "${WHITE}Portas padrão: 80, 8080, 8880, 3128${NC}"
-    box_line "${YELLOW}Porta 443: use opção [04] PROXY + PROTOCOLO${NC}"
+    box_line "${WHITE}$(language_text default_ports "$LANGUAGE")${NC}"
+    box_line "${YELLOW}$(language_text port443_hint "$LANGUAGE")${NC}"
     box_bottom
     echo ""
-    read -p "Porta: " PORT
+    read -p "$(language_text port_prompt "$LANGUAGE") " PORT
     [[ -z "$PORT" ]] && return
     if systemctl is-active --quiet "proxy-${PORT}.service" 2>/dev/null; then
         echo -e "${RED}Porta ${PORT} já está em uso!${NC}"; sleep 2; return
     fi
-    read -r -p "Habilitar o HTTPS/TLS? (s/n): " HTTPS
+    read -r -p "$(language_text https_prompt "$LANGUAGE") " HTTPS
     HTTPS=${HTTPS,,}
+    [[ "$HTTPS" == "y" ]] && HTTPS="s"
     [[ -z "$HTTPS" ]] && HTTPS="n"
     if [[ "$HTTPS" != "s" && "$HTTPS" != "n" ]]; then
         echo -e "${RED}Resposta inválida. Use s ou n.${NC}"
         read -r -p "Enter pra continuar..."
         return
     fi
-    read -r -p "Status HTTP (Padrão: @Azpro): " STATUS
+    read -r -p "$(language_text http_status_prompt "$LANGUAGE") " STATUS
     [[ -z "$STATUS" ]] && STATUS="@Azpro"
     read -p "Habilitar somente SSH? (s/n): " SSH_ONLY
     SSH_ONLY=${SSH_ONLY,,}
+    [[ "$SSH_ONLY" == "y" ]] && SSH_ONLY="s"
     mkdir -p /opt/mpro
     create_service "$PORT" "$STATUS" "$SSH_ONLY" "$HTTPS"
     systemctl daemon-reload
@@ -299,14 +423,15 @@ open_port() {
 }
 
 open_xhttp() {
+    local LANGUAGE="$(get_language)"
     clear
     show_banner
     echo ""
     box_top
-    box_line "${WHITE}${BOLD}xHTTP_SSH / SSL TUNNEL - Porta 443${NC}"
+    box_line "${WHITE}${BOLD}$(language_text xhttp_title "$LANGUAGE")${NC}"
     box_bottom
     echo ""
-    read -r -p "Nome do status HTTP: " STATUS
+    read -r -p "$(language_text status_name_prompt "$LANGUAGE") " STATUS
     [[ -z "$STATUS" ]] && STATUS="@Azpro"
     read -p "Porta SSH backend (Padrão: 22): " SSH_PORT
     [[ -z "$SSH_PORT" ]] && SSH_PORT="22"
@@ -337,33 +462,34 @@ open_xhttp() {
 }
 
 open_integrated() {
+    local LANGUAGE="$(get_language)"
     clear
     echo -e "${CYAN}+--------------------------------------------------------+${NC}"
     echo -e "${CYAN}+--------------------------------------------------------+${NC}"
-    echo -e "${WHITE}|  CONFIGURACOES ATUAIS                                  |${NC}"
+    echo -e "${WHITE}|  $(language_text integrated_title "$LANGUAGE")                       |${NC}"
     echo -e "${CYAN}+--------------------------------------------------------+${NC}"
-    echo -e "${WHITE}|  Porta: 8000                                           |${NC}"
-    echo -e "${WHITE}|  Sub-rede: 10.10.0.0/16                                |${NC}"
-    echo -e "${WHITE}|  Interface TUN: tun0                                   |${NC}"
-    echo -e "${WHITE}|  Protocolos: tcp:8000,udp:8000,quic:8001               |${NC}"
+    echo -e "${WHITE}|  $(language_text port_label "$LANGUAGE") 8000                                      |${NC}"
+    echo -e "${WHITE}|  $(language_text subnet_label "$LANGUAGE") 10.10.0.0/16                         |${NC}"
+    echo -e "${WHITE}|  $(language_text tun_label "$LANGUAGE") tun0                                    |${NC}"
+    echo -e "${WHITE}|  $(language_text protocols_label "$LANGUAGE") tcp:8000,udp:8000,quic:8001  |${NC}"
     echo -e "${CYAN}+--------------------------------------------------------+${NC}"
-    read -p "Porta (Enter para manter [8000]): " PORT
+    read -p "$(language_text port_label "$LANGUAGE") (Enter para manter [8000]): " PORT
     [[ -z "$PORT" ]] && PORT="8000"
-    read -p "Sub-rede CIDR (Enter para manter [10.10.0.0/16]): " SUBNET
+    read -p "$(language_text subnet_label "$LANGUAGE") CIDR (Enter para manter [10.10.0.0/16]): " SUBNET
     [[ -z "$SUBNET" ]] && SUBNET="10.10.0.0/16"
-    read -p "Interface TUN (Enter para manter [tun0]): " TUN
+    read -p "$(language_text tun_label "$LANGUAGE") (Enter para manter [tun0]): " TUN
     [[ -z "$TUN" ]] && TUN="tun0"
-    read -p "Deseja ativar UDP na mesma porta? (s/N) " ENABLE_UDP
+    read -p "$(language_text enable_udp_prompt "$LANGUAGE") " ENABLE_UDP
     UDP_ARG=""
-    [[ "$ENABLE_UDP" == "s" || "$ENABLE_UDP" == "S" ]] && UDP_ARG="--udp"
-    read -p "Deseja ativar QUIC? (s/N) " ENABLE_QUIC
+    is_yes "$ENABLE_UDP" && UDP_ARG="--udp"
+    read -p "$(language_text enable_quic_prompt "$LANGUAGE") " ENABLE_QUIC
     QUIC_ARG=""
-    if [[ "$ENABLE_QUIC" == "s" || "$ENABLE_QUIC" == "S" ]]; then
-        read -p "Porta para QUIC (Enter para 8001): " QPORT
+    if is_yes "$ENABLE_QUIC"; then
+        read -p "$(language_text quic_port_prompt "$LANGUAGE") " QPORT
         [[ -z "$QPORT" ]] && QPORT="8001"
         QUIC_ARG="--quic --quic-port $QPORT"
     fi
-    read -r -p "Nome do status HTTP: " STATUS
+    read -r -p "$(language_text status_http_prompt "$LANGUAGE") " STATUS
     [[ -z "$STATUS" ]] && STATUS="@Azpro"
     mkdir -p /opt/mpro
     if [ ! -f "/opt/mpro/cert.pem" ]; then
@@ -415,7 +541,7 @@ toggle_port_multiprotocol() {
     }
 
     read -r -p "A porta ${PORT} será reiniciada e as conexões cairão. Continuar? (s/N): " CONFIRM
-    [[ "$CONFIRM" != "s" && "$CONFIRM" != "S" ]] && return 0
+    is_yes "$CONFIRM" || return 0
 
     if ! mkdir -p "$BYPASS_DIR"; then
         echo -e "${RED}Não foi possível acessar ${BYPASS_DIR}.${NC}"
@@ -453,7 +579,7 @@ toggle_port_multiprotocol() {
 }
 
 manage_multiprotocol() {
-    local ACTION SERVICE_FILE SERVICE_NAME PORT FLAG INDEX
+    local ACTION SERVICE_FILE SERVICE_NAME PORT FLAG INDEX LANGUAGE
     local -a ACTIVE_PORTS=()
     while true; do
         ACTIVE_PORTS=()
@@ -471,30 +597,31 @@ manage_multiprotocol() {
         fi
 
         clear
+        LANGUAGE="$(get_language)"
         show_banner
         echo ""
         box_top
-        box_line "${WHITE}${BOLD}MULTIPROTOCOLO + STATUS${NC}"
+        box_line "${WHITE}${BOLD}$(language_text status "$LANGUAGE")${NC}"
         box_mid
         if ((${#ACTIVE_PORTS[@]} == 0)); then
-            box_line "${YELLOW}Nenhuma porta Azpro ativa.${NC}"
+            box_line "${YELLOW}$(language_text no_active "$LANGUAGE")${NC}"
         else
             for ((INDEX=0; INDEX<${#ACTIVE_PORTS[@]}; INDEX++)); do
                 PORT=${ACTIVE_PORTS[$INDEX]}
                 FLAG=$(multiprotocol_flag_for_port "$PORT")
                 printf -v ACTION '%02d' "$((INDEX + 1))"
                 if [[ -f "$FLAG" ]]; then
-                    box_line "${WHITE}[${ACTION}]${NC} Porta ${PORT} - MULTIPROTOCOLO ${GREEN}ATIVO${NC}"
+                    box_line "${WHITE}[${ACTION}]${NC} ${PORT} - $(language_text multiprotocol "$LANGUAGE") ${GREEN}$(language_text active "$LANGUAGE")${NC}"
                 else
-                    box_line "${WHITE}[${ACTION}]${NC} Porta ${PORT} - MULTIPROTOCOLO ${YELLOW}DESATIVADO${NC}"
+                    box_line "${WHITE}[${ACTION}]${NC} ${PORT} - $(language_text multiprotocol "$LANGUAGE") ${YELLOW}OFF${NC}"
                 fi
             done
         fi
         box_mid
-        box_line "${WHITE}[00]${NC} - VOLTAR"
+        box_line "${WHITE}[00]${NC} - $(language_text back "$LANGUAGE")"
         box_bottom
         echo ""
-        read -r -p "Selecione a porta: " ACTION
+        read -r -p "$(language_text select_port "$LANGUAGE") " ACTION
         [[ "$ACTION" == "00" || "$ACTION" == "0" || -z "$ACTION" ]] && return
 
         if [[ "$ACTION" =~ ^[0-9]+$ ]] && ((10#$ACTION >= 1 && 10#$ACTION <= ${#ACTIVE_PORTS[@]})); then
@@ -505,7 +632,7 @@ manage_multiprotocol() {
 }
 
 restart_port() {
-    local SERVICE_FILE SERVICE NAME LABEL CHOICE INDEX=0 SELECTED=""
+    local SERVICE_FILE SERVICE NAME LABEL CHOICE INDEX=0 SELECTED="" LANGUAGE
     local -a ACTIVE_SERVICES=() ACTIVE_LABELS=()
 
     while true; do
@@ -527,13 +654,14 @@ restart_port() {
         done
 
         clear
+        LANGUAGE="$(get_language)"
         show_banner
         echo ""
         box_top
-        box_line "${WHITE}${BOLD}Reiniciar porta aberta${NC}"
+        box_line "${WHITE}${BOLD}$(language_text restart_title "$LANGUAGE")${NC}"
         box_mid
         if ((${#ACTIVE_SERVICES[@]} == 0)); then
-            box_line "${YELLOW}Nenhum serviço Azpro ativo.${NC}"
+            box_line "${YELLOW}$(language_text no_active "$LANGUAGE")${NC}"
         else
             for ((INDEX=0; INDEX<${#ACTIVE_SERVICES[@]}; INDEX++)); do
                 printf -v CHOICE '%02d' "$((INDEX + 1))"
@@ -541,10 +669,10 @@ restart_port() {
             done
         fi
         box_mid
-        box_line "${WHITE}[00]${NC} - VOLTAR"
+        box_line "${WHITE}[00]${NC} - $(language_text back "$LANGUAGE")"
         box_bottom
         echo ""
-        read -r -p "Escolha a porta para reiniciar: " CHOICE
+        read -r -p "$(language_text choose_port_restart "$LANGUAGE") " CHOICE
         [[ "$CHOICE" == "00" || "$CHOICE" == "0" || -z "$CHOICE" ]] && return
 
         if [[ "$CHOICE" =~ ^[0-9]+$ ]] && ((10#$CHOICE >= 1 && 10#$CHOICE <= ${#ACTIVE_SERVICES[@]})); then
@@ -578,7 +706,7 @@ close_service() {
 }
 
 close_port() {
-    local SERVICE_FILE SERVICE NAME LABEL CHOICE INDEX=0 SELECTED=""
+    local SERVICE_FILE SERVICE NAME LABEL CHOICE INDEX=0 SELECTED="" LANGUAGE
     local -a ACTIVE_SERVICES=() ACTIVE_LABELS=()
 
     while true; do
@@ -600,13 +728,14 @@ close_port() {
         done
 
         clear
+        LANGUAGE="$(get_language)"
         show_banner
         echo ""
         box_top
-        box_line "${WHITE}${BOLD}Fechar porta aberta${NC}"
+        box_line "${WHITE}${BOLD}$(language_text close_title "$LANGUAGE")${NC}"
         box_mid
         if ((${#ACTIVE_SERVICES[@]} == 0)); then
-            box_line "${YELLOW}Nenhum serviço Azpro ativo.${NC}"
+            box_line "${YELLOW}$(language_text no_active "$LANGUAGE")${NC}"
         else
             for ((INDEX=0; INDEX<${#ACTIVE_SERVICES[@]}; INDEX++)); do
                 printf -v CHOICE '%02d' "$((INDEX + 1))"
@@ -614,10 +743,10 @@ close_port() {
             done
         fi
         box_mid
-        box_line "${WHITE}[00]${NC} - VOLTAR"
+        box_line "${WHITE}[00]${NC} - $(language_text back "$LANGUAGE")"
         box_bottom
         echo ""
-        read -r -p "Escolha a porta para fechar: " CHOICE
+        read -r -p "$(language_text choose_port_close "$LANGUAGE") " CHOICE
         [[ "$CHOICE" == "00" || "$CHOICE" == "0" || -z "$CHOICE" ]] && return
         if [[ "$CHOICE" =~ ^[0-9]+$ ]] && ((10#$CHOICE >= 1 && 10#$CHOICE <= ${#ACTIVE_SERVICES[@]})); then
             SELECTED=${ACTIVE_SERVICES[$((10#$CHOICE - 1))]}
@@ -706,11 +835,12 @@ run_update_step() {
 }
 
 language_menu() {
-    local CURRENT="pt-BR" CHOICE NEW_LANGUAGE
+    local CURRENT="pt-BR" CHOICE NEW_LANGUAGE LANGUAGE
     [[ -f "$LANGUAGE_FILE" ]] && CURRENT=$(cat "$LANGUAGE_FILE")
 
     while true; do
         clear
+        LANGUAGE="$(get_language)"
         show_banner
         echo ""
         box_top
@@ -732,10 +862,22 @@ language_menu() {
             box_line "${WHITE}3 • Español${NC}"
         fi
         box_mid
-        box_line "${RED}0 • Voltar${NC}"
+        if [[ "$LANGUAGE" == "en" ]]; then
+            box_line "${RED}0 • Back${NC}"
+        elif [[ "$LANGUAGE" == "es" ]]; then
+            box_line "${RED}0 • Volver${NC}"
+        else
+            box_line "${RED}0 • Voltar${NC}"
+        fi
         box_bottom
         echo ""
-        read -r -p "Selecione uma opção [0-3]: " CHOICE
+        if [[ "$LANGUAGE" == "en" ]]; then
+            read -r -p "Choose an option [0-3]: " CHOICE
+        elif [[ "$LANGUAGE" == "es" ]]; then
+            read -r -p "Seleccione una opción [0-3]: " CHOICE
+        else
+            read -r -p "Selecione uma opção [0-3]: " CHOICE
+        fi
 
         case "$CHOICE" in
             1) NEW_LANGUAGE="pt-BR" ;;
@@ -752,20 +894,20 @@ language_menu() {
 }
 
 update_from_github() {
-    local CONFIRM="" UPDATE_SCRIPT="" UPDATE_RESULT=0
+    local CONFIRM="" UPDATE_SCRIPT="" UPDATE_RESULT=0 LANGUAGE="$(get_language)"
     clear
     show_banner
     echo ""
     box_top
-    box_line "${WHITE}${BOLD}Atualizar Azpro pelo GitHub${NC}"
+    box_line "${WHITE}${BOLD}$(language_text update_title "$LANGUAGE")${NC}"
     box_mid
-    box_line "A atualização recompila os binários."
-    box_line "Os serviços podem reiniciar."
-    box_line "O menu será recarregado ao terminar."
+    box_line "$(language_text update_rebuild "$LANGUAGE")"
+    box_line "$(language_text update_restart "$LANGUAGE")"
+    box_line "$(language_text update_reload "$LANGUAGE")"
     box_bottom
     echo ""
-    read -r -p "Continuar com a atualização? (s/N): " CONFIRM
-    [[ "$CONFIRM" != "s" && "$CONFIRM" != "S" ]] && return
+    read -r -p "$(language_text update_confirm "$LANGUAGE") " CONFIRM
+    is_yes "$CONFIRM" || return
 
     if [[ "$EUID" -ne 0 ]]; then
         echo -e "${RED}Execute o menu como root para atualizar.${NC}"
@@ -823,7 +965,7 @@ remove_owned_link() {
 }
 
 uninstall_proxy() {
-    local CONFIRM SERVICE_FILE SERVICE STATE BIN FAILED=0
+    local CONFIRM SERVICE_FILE SERVICE STATE BIN FAILED=0 LANGUAGE="$(get_language)"
     local -a OWNED_SERVICES=()
     local -a BINARIES=("$LKPROXY" "$LKPROXY_XHTTP" "$LKPROXY_INTEGRATED" "/opt/mpro/proxy-websocket")
 
@@ -831,11 +973,11 @@ uninstall_proxy() {
     show_banner
     echo ""
     box_top
-    box_line "${RED}${BOLD}DESINSTALAR Azpro${NC}"
+    box_line "${RED}${BOLD}$(language_text uninstall_title "$LANGUAGE")${NC}"
     box_mid
-    box_line "Para serviços e remove binários do proxy."
-    box_line "Remove certificados TLS de /opt/mpro."
-    box_line "Preserva SSH, Rust, OpenSSL e demais arquivos."
+    box_line "$(language_text uninstall_desc1 "$LANGUAGE")"
+    box_line "$(language_text uninstall_desc2 "$LANGUAGE")"
+    box_line "$(language_text uninstall_desc3 "$LANGUAGE")"
     box_mid
     echo ""
 
@@ -853,7 +995,7 @@ uninstall_proxy() {
     echo -e "${YELLOW}Para desinstalar o proxy, digite: s${NC}"
     echo -e "${YELLOW}Para cancelar a desinstalação, digite: n${NC}"
     read -r -p "Escolha (s/n): " CONFIRM
-    if [[ "$CONFIRM" != "s" && "$CONFIRM" != "S" ]]; then
+    if ! is_yes "$CONFIRM"; then
         echo -e "${YELLOW}Desinstalação cancelada.${NC}"
         read -r -p "Enter para voltar..." _
         return 0
