@@ -60,7 +60,7 @@ language_text() {
         en:choose) printf 'Choose an option:' ;;
         en:open_title) printf 'Open Port' ;;
         en:default_ports) printf 'Default ports: 80, 8080, 8880, 3128' ;;
-        en:port443_hint) printf 'Port 443: use option [04] PROXY + PROTOCOL' ;;
+        en:port443_hint) printf 'Port 443: use option [04] XHTTP + SSL Tunnel' ;;
         en:port_prompt) printf 'Port:' ;;
         en:https_prompt) printf 'Enable HTTPS/TLS? (y/n):' ;;
         en:http_status_prompt) printf 'HTTP status (Default: @Azpro):' ;;
@@ -115,7 +115,7 @@ language_text() {
         es:choose) printf 'Seleccione una opción:' ;;
         es:open_title) printf 'Abrir puerto' ;;
         es:default_ports) printf 'Puertos predeterminados: 80, 8080, 8880, 3128' ;;
-        es:port443_hint) printf 'Puerto 443: use la opción [04] PROXY + PROTOCOLO' ;;
+        es:port443_hint) printf 'Puerto 443: use la opción [04] XHTTP + SSL Tunnel' ;;
         es:port_prompt) printf 'Puerto:' ;;
         es:https_prompt) printf '¿Activar HTTPS/TLS? (s/n):' ;;
         es:http_status_prompt) printf 'Estado HTTP (Predeterminado: @Azpro):' ;;
@@ -170,7 +170,7 @@ language_text() {
         pt-BR:choose) printf 'Escolha uma opção:' ;;
         pt-BR:open_title) printf 'Abrir Porta' ;;
         pt-BR:default_ports) printf 'Portas padrão: 80, 8080, 8880, 3128' ;;
-        pt-BR:port443_hint) printf 'Porta 443: use opção [04] PROXY + PROTOCOLO' ;;
+        pt-BR:port443_hint) printf 'Porta 443: use opção [04] XHTTP + SSL Tunnel' ;;
         pt-BR:port_prompt) printf 'Porta:' ;;
         pt-BR:https_prompt) printf 'Habilitar o HTTPS/TLS? (s/n):' ;;
         pt-BR:http_status_prompt) printf 'Status HTTP (Padrão: @Azpro):' ;;
