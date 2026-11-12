@@ -37,7 +37,7 @@ azpro   # Único comando para abrir o menu deste proxy
 
 ### Opção 01 — Configurar portas
 
-**[01] CONFIGURAR PORTAS** abre um submenu com **[01] ABRIR PORTA** e **[02] HCR ABRIR PORTA**. A opção normal mantém o fluxo HTTP legado compatível com a opção 1 do AWProxy e pergunta se HTTPS/TLS deve ser ativado. A opção HCR é separada e usa o binário oficial `hcr-server` para Linux amd64, instalado em `/opt/mpro/hcr-server`, `/usr/local/bin/hcr-server` ou `/usr/bin/hcr-server`. Ela cria e inicia `hcr-8880.service` com `--port 8880 --transport plain` (sem TLS), verifica conflitos de porta e não sobrescreve uma unit HCR existente. O binário oficial precisa ser obtido/instalado separadamente pelo canal do ePro. O handler HCR TLS legado do modo multiprotocolo não substitui este serviço HCR plain.
+**[01] CONFIGURAR PORTAS** abre um submenu com **[01] ABRIR PORTA**, **[02] HCR ABRIR PORTA** e **[03] HCR INSTALAR / ATUALIZAR SERVIDOR**. A opção normal mantém o fluxo HTTP legado compatível com a opção 1 do AWProxy e pergunta se HTTPS/TLS deve ser ativado. A opção HCR é separada e usa o binário oficial `hcr-server` para Linux amd64. Se o binário não estiver presente em `/opt/mpro/hcr-server`, `/opt/hcr-server/hcr-server`, `/usr/local/bin/hcr-server` ou `/usr/bin/hcr-server`, o menu oferece baixar e instalar a versão oficial automaticamente (valida ELF64 amd64, guarda backup do binário anterior e pode usar outra origem via `HCR_SOURCE_URL`); recusando a instalação, o menu apenas mostra onde colocar o binário. Em seguida ele cria e inicia `hcr-8880.service` com transporte `plain` (sem TLS) e destino SSH `127.0.0.1:22`, detecta o formato de argumentos aceito pelo binário (`-listen/-target/-transport` ou `--port/--transport`) e tenta o formato alternativo se a porta não subir, verifica conflitos de porta, confirma que a 8880 está escutando e faz rollback da unit se o serviço falhar. Uma unit `hcr-8880.service` já existente nunca é sobrescrita: o menu só pergunta se deve iniciá-la. O handler HCR TLS legado do modo multiprotocolo não substitui este serviço HCR plain.
 
 Na opção 1, o handler original permanece `HTTP/1.1 101 <status>`, uma leitura de até 1024 bytes e `HTTP/1.1 200 <status>`; não envia o segundo `101` nem retransmite aquele buffer inicial ao backend. A sequência `101`, `101`, `200` com o mesmo texto e o encaminhamento do preâmbulo só são usados quando a opção 7 está ativa para a porta. O texto `<status>` vem da configuração do serviço, por exemplo `Aznet`. Se “somente SSH” estiver ativa, encaminha ao SSH local (`127.0.0.1:22`); caso contrário, a seleção legada inspeciona os próximos bytes com `peek`, como no código original, e escolhe SSH ou VPN local (`127.0.0.1:1194`). O padrão do Azpro é `@Azpro`.
 
@@ -64,6 +64,7 @@ O submenu de configuração de portas contém:
 ```
 [01] - ABRIR PORTA
 [02] - HCR ABRIR PORTA (8880 / PLAIN)
+[03] - HCR INSTALAR / ATUALIZAR SERVIDOR
 ```
 
 ### Opção 04 - xHTTP SplitHTTP (Porta 443)

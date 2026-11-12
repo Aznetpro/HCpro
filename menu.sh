@@ -11,7 +11,13 @@ BYPASS_DIR="/opt/mpro"
 LEGACY_MULTIPROTOCOL_FLAG="${BYPASS_DIR}/multiprotocol.enabled"
 SYSTEMD_DIR="/etc/systemd/system"
 LANGUAGE_FILE="${BYPASS_DIR}/language"
-HCR_BINARY_CANDIDATES=("${BYPASS_DIR}/hcr-server" "/usr/local/bin/hcr-server" "/usr/bin/hcr-server")
+HCR_PORT="8880"
+HCR_SERVICE="hcr-8880.service"
+HCR_SSH_TARGET="127.0.0.1:22"
+HCR_BINARY_CANDIDATES=("${BYPASS_DIR}/hcr-server" "/opt/hcr-server/hcr-server" "/usr/local/bin/hcr-server" "/usr/bin/hcr-server")
+# Fonte pública do binário oficial hcr-server (Linux amd64). Pode ser trocada
+# exportando HCR_SOURCE_URL antes de abrir o menu.
+HCR_SOURCE_URL="${HCR_SOURCE_URL:-https://raw.githubusercontent.com/decodezsniff-art/hcr-server/main/hcr-server}"
 
 # Cores
 RED='\033[0;31m'
@@ -276,6 +282,7 @@ has_active_azpro_service() {
         SERVICE=$(basename "$SERVICE_FILE")
         systemctl is-active --quiet "$SERVICE" 2>/dev/null && return 0
     done
+    systemctl is-active --quiet "$HCR_SERVICE" 2>/dev/null && return 0
     return 1
 }
 
@@ -439,8 +446,201 @@ hcr_binary_path() {
     return 1
 }
 
+hcr_arch_ok() {
+    case "$(uname -m 2>/dev/null)" in
+        x86_64|amd64) return 0 ;;
+        *) return 1 ;;
+    esac
+}
+
+hcr_binary_version() {
+    local OUTPUT=""
+    OUTPUT=$(timeout 5 "$1" -version 2>&1 </dev/null) || true
+    OUTPUT=${OUTPUT%%$'\n'*}
+    printf '%s' "${OUTPUT:-desconhecida}"
+}
+
+hcr_install_binary() {
+    local DEST="${BYPASS_DIR}/hcr-server" TMP="" MAGIC="" SOURCE="${HCR_SOURCE_URL}"
+
+    if ! hcr_arch_ok; then
+        echo -e "${RED}O hcr-server oficial só é publicado para Linux amd64. Arquitetura atual: $(uname -m).${NC}" >&2
+        echo "Instale o binário manualmente em ${DEST} ou /usr/local/bin/hcr-server." >&2
+        return 1
+    fi
+    if ! command -v curl >/dev/null 2>&1; then
+        echo -e "${RED}curl não está instalado; não é possível baixar o hcr-server.${NC}" >&2
+        return 1
+    fi
+    if ! mkdir -p "$BYPASS_DIR"; then
+        echo -e "${RED}Não foi possível criar ${BYPASS_DIR}.${NC}" >&2
+        return 1
+    fi
+    TMP=$(mktemp /tmp/azpro-hcr.XXXXXX) || {
+        echo -e "${RED}Não foi possível criar arquivo temporário.${NC}" >&2
+        return 1
+    }
+
+    echo "Baixando hcr-server de ${SOURCE}" >&2
+    if ! curl -fsSL --connect-timeout 15 --max-time 180 --retry 3 "$SOURCE" -o "$TMP"; then
+        rm -f -- "$TMP"
+        echo -e "${RED}Falha ao baixar o hcr-server.${NC}" >&2
+        return 1
+    fi
+
+    # Valida ELF64 x86-64 (e_ident + e_machine = 0x3e) sem depender do pacote `file`.
+    MAGIC=$(head -c 20 "$TMP" 2>/dev/null | od -An -tx1 | tr -d ' \n')
+    if [[ "$MAGIC" != 7f454c46* || "${MAGIC:36:4}" != "3e00" ]]; then
+        rm -f -- "$TMP"
+        echo -e "${RED}O arquivo baixado não é um binário ELF Linux amd64 válido.${NC}" >&2
+        return 1
+    fi
+
+    if ! chmod 755 "$TMP"; then
+        rm -f -- "$TMP"
+        echo -e "${RED}Não foi possível preparar o binário baixado.${NC}" >&2
+        return 1
+    fi
+    if [[ -f "$DEST" ]]; then
+        cp -a -- "$DEST" "${DEST}.bak.$(date +%Y%m%d-%H%M%S)" 2>/dev/null || true
+    fi
+    if ! install -m 755 "$TMP" "$DEST"; then
+        rm -f -- "$TMP"
+        echo -e "${RED}Falha ao instalar ${DEST}.${NC}" >&2
+        return 1
+    fi
+    rm -f -- "$TMP"
+    echo -e "${GREEN}hcr-server instalado em ${DEST}${NC}" >&2
+    echo "Versão: $(hcr_binary_version "$DEST")" >&2
+    return 0
+}
+
+hcr_ensure_binary() {
+    local BINARY="" ANSWER=""
+
+    if BINARY=$(hcr_binary_path); then
+        printf '%s' "$BINARY"
+        return 0
+    fi
+    echo -e "${YELLOW}Servidor HCR oficial não instalado.${NC}" >&2
+    if ! hcr_arch_ok; then
+        echo "O binário oficial só existe para Linux amd64; instale manualmente em ${BYPASS_DIR}/hcr-server." >&2
+        return 1
+    fi
+    read -r -p "Baixar e instalar o hcr-server oficial agora? (s/n): " ANSWER
+    if ! is_yes "$ANSWER"; then
+        echo "Coloque o binário oficial hcr-server em ${BYPASS_DIR}/hcr-server ou /usr/local/bin/hcr-server." >&2
+        return 1
+    fi
+    hcr_install_binary || return 1
+    hcr_binary_path
+}
+
+# Descobre o formato de argumentos aceito pelo binário instalado.
+hcr_exec_args() {
+    local PORT="$1" BINARY="$2" HELP=""
+
+    HELP=$(timeout 5 "$BINARY" -h 2>&1 </dev/null) || true
+    if grep -q -- "-listen" <<<"$HELP"; then
+        printf '%s' "-listen :${PORT} -target ${HCR_SSH_TARGET} -transport plain"
+    else
+        printf '%s' "--port ${PORT} --transport plain"
+    fi
+}
+
+hcr_alternate_args() {
+    local ARGS="$1" PORT="$2"
+
+    if [[ "$ARGS" == -listen* ]]; then
+        printf '%s' "--port ${PORT} --transport plain"
+    else
+        printf '%s' "-listen :${PORT} -target ${HCR_SSH_TARGET} -transport plain"
+    fi
+}
+
+hcr_port_busy() {
+    ss -lntH 2>/dev/null | awk '{print $4}' | grep -Eq "[:.]$1$"
+}
+
+hcr_wait_listening() {
+    local PORT="$1" TENTATIVAS="${2:-10}" I
+    for ((I = 0; I < TENTATIVAS; I++)); do
+        hcr_port_busy "$PORT" && return 0
+        sleep 0.5
+    done
+    return 1
+}
+
+hcr_write_unit() {
+    local BINARY="$1" ARGS="$2" SERVICE_FILE="${SYSTEMD_DIR}/${HCR_SERVICE}"
+
+    cat > "$SERVICE_FILE" <<EOF
+[Unit]
+Description=HCR Server - Porta ${HCR_PORT} (plain)
+After=network.target
+Conflicts=proxy-${HCR_PORT}.service
+
+[Service]
+Type=simple
+ExecStart=${BINARY} ${ARGS}
+Restart=on-failure
+RestartSec=5
+User=root
+WorkingDirectory=${BYPASS_DIR}
+
+[Install]
+WantedBy=multi-user.target
+EOF
+}
+
+hcr_manage_binary() {
+    local BINARY="" ANSWER=""
+
+    clear
+    show_banner
+    echo ""
+    box_top
+    box_line "${WHITE}${BOLD}HCR SERVIDOR${NC}"
+    box_mid
+    if BINARY=$(hcr_binary_path); then
+        box_line "Binário: ${BINARY}"
+    else
+        box_line "${YELLOW}Binário não instalado${NC}"
+    fi
+    box_bottom
+    echo ""
+    if [[ -n "$BINARY" ]]; then
+        echo "Versão: $(hcr_binary_version "$BINARY")"
+        echo "Fonte: ${HCR_SOURCE_URL}"
+        echo ""
+    fi
+    read -r -p "Baixar/atualizar o hcr-server oficial agora? (s/n): " ANSWER
+    if ! is_yes "$ANSWER"; then
+        return 0
+    fi
+    if [[ "$EUID" -ne 0 ]]; then
+        echo -e "${RED}Execute o menu como root para instalar o servidor HCR.${NC}"
+        read -r -p "Enter para continuar..." _
+        return 1
+    fi
+    if ! hcr_install_binary; then
+        read -r -p "Enter para continuar..." _
+        return 1
+    fi
+    if systemctl is-active --quiet "$HCR_SERVICE" 2>/dev/null; then
+        if systemctl restart "$HCR_SERVICE" >/dev/null 2>&1 && hcr_wait_listening "$HCR_PORT"; then
+            echo -e "${GREEN}${HCR_SERVICE} reiniciado com o novo binário.${NC}"
+        else
+            echo -e "${RED}Falha ao reiniciar ${HCR_SERVICE}; confira: journalctl -u ${HCR_SERVICE} -n 50${NC}"
+        fi
+    fi
+    read -r -p "Enter para continuar..." _
+}
+
 hcr_open_port() {
-    local PORT="8880" SERVICE="hcr-8880.service" BINARY SERVICE_FILE="${SYSTEMD_DIR}/hcr-8880.service"
+    local PORT="${HCR_PORT}" SERVICE="${HCR_SERVICE}" SERVICE_FILE="${SYSTEMD_DIR}/${HCR_SERVICE}"
+    local BINARY="" ARGS="" ALT_ARGS="" ANSWER="" ATTEMPT=""
+
     clear
     show_banner
     echo ""
@@ -449,6 +649,7 @@ hcr_open_port() {
     box_mid
     box_line "Transporte: plain (sem TLS)"
     box_line "Porta padrão: ${PORT}"
+    box_line "Destino SSH: ${HCR_SSH_TARGET}"
     box_bottom
     echo ""
 
@@ -462,64 +663,81 @@ hcr_open_port() {
         read -r -p "Enter para continuar..." _
         return 1
     fi
-    if ! BINARY=$(hcr_binary_path); then
-        echo -e "${YELLOW}Servidor HCR oficial não instalado.${NC}"
-        echo "Coloque o binário oficial hcr-server em ${BYPASS_DIR}/hcr-server ou /usr/local/bin/hcr-server."
+    if ! BINARY=$(hcr_ensure_binary); then
         read -r -p "Enter para continuar..." _
         return 1
     fi
+    echo "Binário: ${BINARY}"
+
     if systemctl is-active --quiet "$SERVICE" 2>/dev/null; then
         echo -e "${GREEN}HCR já está ativo na porta ${PORT}.${NC}"
+        if hcr_port_busy "$PORT"; then
+            echo -e "${AQUA}Porta ${PORT} escutando (transporte plain).${NC}"
+        else
+            echo -e "${YELLOW}O serviço está ativo, mas a porta ${PORT} não responde.${NC}"
+        fi
         read -r -p "Enter para continuar..." _
         return 0
     fi
+
     if [[ -e "$SERVICE_FILE" ]]; then
-        echo -e "${YELLOW}${SERVICE_FILE} já existe e não está ativo; não vou sobrescrever sua configuração.${NC}"
+        read -r -p "${SERVICE_FILE} já existe e está parado. Iniciar o serviço existente? (s/n): " ANSWER
+        if is_yes "$ANSWER"; then
+            if systemctl start "$SERVICE" >/dev/null 2>&1 && hcr_wait_listening "$PORT"; then
+                echo -e "${GREEN}HCR iniciado na porta ${PORT} usando a unit existente.${NC}"
+            else
+                echo -e "${RED}Não foi possível iniciar ${SERVICE}.${NC}"
+                journalctl -u "$SERVICE" -n 20 --no-pager 2>/dev/null
+            fi
+        else
+            echo -e "${YELLOW}Unit mantida sem alterações.${NC}"
+        fi
         read -r -p "Enter para continuar..." _
-        return 1
+        return 0
     fi
-    if systemctl is-active --quiet "proxy-${PORT}.service" 2>/dev/null || \
-       ss -lntH 2>/dev/null | awk '{print $4}' | grep -Eq ":${PORT}$"; then
+
+    if systemctl is-active --quiet "proxy-${PORT}.service" 2>/dev/null || hcr_port_busy "$PORT"; then
         echo -e "${RED}A porta ${PORT} já está em uso.${NC}"
         read -r -p "Enter para continuar..." _
         return 1
     fi
 
-    cat > "$SERVICE_FILE" <<EOF
-[Unit]
-Description=HCR Server - Porta ${PORT} (plain)
-After=network.target
-Conflicts=proxy-${PORT}.service
+    ARGS=$(hcr_exec_args "$PORT" "$BINARY")
+    ALT_ARGS=$(hcr_alternate_args "$ARGS" "$PORT")
 
-[Service]
-Type=simple
-ExecStart=${BINARY} --port ${PORT} --transport plain
-Restart=on-failure
-RestartSec=5
-User=root
-WorkingDirectory=${BYPASS_DIR}
+    for ATTEMPT in "$ARGS" "$ALT_ARGS"; do
+        [[ -n "$ATTEMPT" ]] || continue
+        if ! hcr_write_unit "$BINARY" "$ATTEMPT"; then
+            echo -e "${RED}Não foi possível escrever ${SERVICE_FILE}.${NC}"
+            read -r -p "Enter para continuar..." _
+            return 1
+        fi
+        if ! systemctl daemon-reload; then
+            rm -f -- "$SERVICE_FILE"
+            echo -e "${RED}Falha ao recarregar systemd; serviço HCR não iniciado.${NC}"
+            read -r -p "Enter para continuar..." _
+            return 1
+        fi
+        systemctl enable "$SERVICE" >/dev/null 2>&1 || true
+        systemctl restart "$SERVICE" >/dev/null 2>&1 || true
+        if systemctl is-active --quiet "$SERVICE" 2>/dev/null && hcr_wait_listening "$PORT"; then
+            echo -e "${GREEN}HCR iniciado na porta ${PORT} com transporte plain (sem TLS).${NC}"
+            echo "Comando: ${BINARY} ${ATTEMPT}"
+            echo "Serviço: systemctl status ${SERVICE}"
+            read -r -p "Enter para continuar..." _
+            return 0
+        fi
+        echo -e "${YELLOW}Os argumentos \"${ATTEMPT}\" não subiram a porta ${PORT}; tentando o formato alternativo...${NC}"
+        systemctl stop "$SERVICE" >/dev/null 2>&1 || true
+    done
 
-[Install]
-WantedBy=multi-user.target
-EOF
-
-    if ! systemctl daemon-reload; then
-        rm -f -- "$SERVICE_FILE"
-        echo -e "${RED}Falha ao recarregar systemd; serviço HCR não iniciado.${NC}"
-        read -r -p "Enter para continuar..." _
-        return 1
-    fi
-    if systemctl enable --now "$SERVICE"; then
-        echo -e "${GREEN}HCR iniciado na porta ${PORT} com transporte plain (sem TLS).${NC}"
-    else
-        echo -e "${RED}Falha ao iniciar ${SERVICE}. Consulte: journalctl -u ${SERVICE} -n 50${NC}"
-        systemctl disable --now "$SERVICE" >/dev/null 2>&1 || true
-        rm -f -- "$SERVICE_FILE"
-        systemctl daemon-reload >/dev/null 2>&1 || true
-        read -r -p "Enter para continuar..." _
-        return 1
-    fi
+    echo -e "${RED}Falha ao iniciar ${SERVICE}.${NC}"
+    journalctl -u "$SERVICE" -n 20 --no-pager 2>/dev/null
+    systemctl disable --now "$SERVICE" >/dev/null 2>&1 || true
+    rm -f -- "$SERVICE_FILE"
+    systemctl daemon-reload >/dev/null 2>&1 || true
     read -r -p "Enter para continuar..." _
+    return 1
 }
 
 configure_ports() {
@@ -534,6 +752,7 @@ configure_ports() {
         box_mid
         box_line "${WHITE}[01]${NC} - ABRIR PORTA"
         box_line "${WHITE}[02]${NC} - HCR ABRIR PORTA (8880 / PLAIN)"
+        box_line "${WHITE}[03]${NC} - HCR INSTALAR / ATUALIZAR SERVIDOR"
         box_mid
         box_line "${WHITE}[00]${NC} - $(language_text back "$LANGUAGE")"
         box_bottom
@@ -542,6 +761,7 @@ configure_ports() {
         case "$ACTION" in
             01|1) open_port ;;
             02|2) hcr_open_port ;;
+            03|3) hcr_manage_binary ;;
             00|0|"") return ;;
             *) ;;
         esac
@@ -778,6 +998,10 @@ restart_port() {
             ACTIVE_SERVICES+=("$SERVICE")
             ACTIVE_LABELS+=("$LABEL")
         done
+        if systemctl is-active --quiet "$HCR_SERVICE" 2>/dev/null; then
+            ACTIVE_SERVICES+=("$HCR_SERVICE")
+            ACTIVE_LABELS+=("HCR (${HCR_PORT})")
+        fi
 
         clear
         LANGUAGE="$(get_language)"
@@ -852,6 +1076,10 @@ close_port() {
             ACTIVE_SERVICES+=("$SERVICE")
             ACTIVE_LABELS+=("$LABEL")
         done
+        if systemctl is-active --quiet "$HCR_SERVICE" 2>/dev/null; then
+            ACTIVE_SERVICES+=("$HCR_SERVICE")
+            ACTIVE_LABELS+=("HCR (${HCR_PORT})")
+        fi
 
         clear
         LANGUAGE="$(get_language)"
@@ -1133,6 +1361,12 @@ uninstall_proxy() {
             OWNED_SERVICES+=("$(basename "$SERVICE_FILE")")
         fi
     done
+    for SERVICE_FILE in "${SYSTEMD_DIR}"/hcr-*.service; do
+        [[ -f "$SERVICE_FILE" ]] || continue
+        if grep -Eq '^[[:space:]]*ExecStart=.*/opt/mpro/hcr-server([[:space:]]|$)' "$SERVICE_FILE"; then
+            OWNED_SERVICES+=("$(basename "$SERVICE_FILE")")
+        fi
+    done
 
     for SERVICE in "${OWNED_SERVICES[@]}"; do
         systemctl stop "$SERVICE" >/dev/null 2>&1 || true
@@ -1188,7 +1422,7 @@ uninstall_proxy() {
         "${BYPASS_DIR}"/multiprotocol-*.enabled
     if ! rm -f -- "$LKPROXY" "$LKPROXY_XHTTP" "$LKPROXY_INTEGRATED" \
         "/opt/mpro/proxy-websocket" "/opt/mpro/menu" "/opt/mpro/cert.pem" \
-        "/opt/mpro/key.pem" "$LEGACY_MULTIPROTOCOL_FLAG"; then
+        "/opt/mpro/key.pem" "$LEGACY_MULTIPROTOCOL_FLAG" "${BYPASS_DIR}/hcr-server"; then
         echo -e "${RED}Falha ao remover alguns arquivos; revise /opt/mpro.${NC}"
         read -r -p "Enter para voltar..." _
         return 1

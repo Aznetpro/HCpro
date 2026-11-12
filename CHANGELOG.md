@@ -1,5 +1,18 @@
 # Mpro - Changelog
 
+## v3.7.0 - HCR com instalação automática
+
+### Novo
+- **HCR INSTALAR / ATUALIZAR SERVIDOR** (opção 03 do submenu CONFIGURAR PORTAS): baixa o `hcr-server` oficial (Linux amd64), valida o ELF64 x86-64 antes de instalar, guarda backup do binário anterior em `/opt/mpro/hcr-server.bak.<data>` e reinicia o `hcr-8880.service` quando ele está ativo.
+- Origem do binário configurável pela variável `HCR_SOURCE_URL`.
+
+### Corrigido
+- **HCR ABRIR PORTA** não para mais no aviso "Servidor HCR oficial não instalado": o menu oferece baixar e instalar o binário na hora e, se a instalação for recusada, apenas mostra onde colocá-lo.
+- Argumentos do serviço: o menu detecta se o binário usa `-listen :8880 -target 127.0.0.1:22 -transport plain` ou `--port 8880 --transport plain` e tenta o formato alternativo se a porta não subir.
+- A abertura da porta agora confirma que a 8880 está realmente escutando e desfaz a unit se o serviço falhar, em vez de apenas habilitar o serviço.
+- Unit `hcr-8880.service` existente e parada: o menu pergunta se deve iniciá-la em vez de abortar.
+- Serviço HCR incluído nas listas de **REINICIAR PORTA** e **FECHAR PORTA**, no status ONLINE/OFFLINE e na desinstalação (unit e binário do Azpro).
+
 ## v3.6.0 - Latency Optimized for Low Latency Networks
 
 ### Otimizações de Latência
