@@ -35,9 +35,9 @@ chmod +x install.sh
 azpro   # Único comando para abrir o menu deste proxy
 ```
 
-### Opção 01 — HTTP/TLS compatível com AWProxy
+### Opção 01 — Configurar portas
 
-Com a opção 7 desligada, **[01] ABRIR PORTA** mantém o fluxo HTTP legado compatível com a opção 1 do AWProxy; nesse modo não despacha SOCKS4/5, SECURITY, WebSocket ou SSH_DIRECT. Ative a opção 7 para usar esses handlers multiprotocolo na porta. O menu pergunta HTTPS/TLS ao abrir a porta; `s` ativa o passthrough TLS do Azpro e `n` o desativa. Essa terminação não ocorre localmente: o tráfego TLS é encaminhado sem descriptografia. O `-t` do AWProxy existe no serviço, mas o `main.rs` atual do AWProxy não o consulta; no Azpro ele é respeitado para manter funcional a escolha HTTP/TLS solicitada. Da mesma forma, o Azpro respeita `-ssh` para forçar o backend SSH; o `main.rs` atual do AWProxy ignora essa flag.
+**[01] CONFIGURAR PORTAS** abre um submenu com **[01] ABRIR PORTA** e **[02] HCR ABRIR PORTA**. A opção normal mantém o fluxo HTTP legado compatível com a opção 1 do AWProxy e pergunta se HTTPS/TLS deve ser ativado. A opção HCR é separada e usa o binário oficial `hcr-server` para Linux amd64, instalado em `/opt/mpro/hcr-server`, `/usr/local/bin/hcr-server` ou `/usr/bin/hcr-server`. Ela cria e inicia `hcr-8880.service` com `--port 8880 --transport plain` (sem TLS), verifica conflitos de porta e não sobrescreve uma unit HCR existente. O binário oficial precisa ser obtido/instalado separadamente pelo canal do ePro. O handler HCR TLS legado do modo multiprotocolo não substitui este serviço HCR plain.
 
 Na opção 1, o handler original permanece `HTTP/1.1 101 <status>`, uma leitura de até 1024 bytes e `HTTP/1.1 200 <status>`; não envia o segundo `101` nem retransmite aquele buffer inicial ao backend. A sequência `101`, `101`, `200` com o mesmo texto e o encaminhamento do preâmbulo só são usados quando a opção 7 está ativa para a porta. O texto `<status>` vem da configuração do serviço, por exemplo `Aznet`. Se “somente SSH” estiver ativa, encaminha ao SSH local (`127.0.0.1:22`); caso contrário, a seleção legada inspeciona os próximos bytes com `peek`, como no código original, e escolhe SSH ou VPN local (`127.0.0.1:1194`). O padrão do Azpro é `@Azpro`.
 
@@ -50,13 +50,20 @@ No menu, escolha **[06] ATUALIZAR PELO GITHUB** para baixar a versão mais recen
 ║       Mpro Menu Free v2.0     ║
 ╠══════════════════════════════════╣
 ║                                  ║
-║ [01] - ABRIR PORTA               ║
+║ [01] - CONFIGURAR PORTAS         ║
 ║ [02] - FECHAR PORTA              ║
 ║ [03] - REINICIAR PORTA           ║
 ║ [04] - xHTTP SPLITHTTP (443)    ║
 ║                                  ║
 ║ [00] - SAIR                      ║
 ╚══════════════════════════════════╝
+```
+
+O submenu de configuração de portas contém:
+
+```
+[01] - ABRIR PORTA
+[02] - HCR ABRIR PORTA (8880 / PLAIN)
 ```
 
 ### Opção 04 - xHTTP SplitHTTP (Porta 443)
@@ -156,7 +163,7 @@ ss -tlnp | grep 443
 
 A opção **[07] MULTIPROTOCOLO + STATUS + TCP** lista as portas numéricas Azpro ativas e permite ativar/desativar o dispatcher de protocolos em cada porta. Ao alternar, a porta é reiniciada e as conexões atuais caem. As opções 01–06 permanecem separadas; se o modo estiver desligado, a opção 01 mantém o fluxo HTTP legado.
 
-Com o modo ligado, o serviço detecta SOCKS4/SOCKS4a, HCR TLS (SSH dentro de TLS), WebSocket RFC 6455, SECURITY, HTTP e SSH direto. Para HCR, o TLS é terminado no Azpro com `/opt/mpro/cert.pem` e `/opt/mpro/key.pem`, e o SSH descriptografado é encaminhado a `127.0.0.1:22`; no HTTP/SSH_PROXY, envia a sequência multi-status esperada pelo cliente (`101 <status>`, `101 <status>`, `200 <status>`), remove os blocos HTTP camuflados do preâmbulo — inclusive payloads encadeadas com `GET`, `GET-` e `UNLOCK` — e mantém o relay bidirecional. Bytes SSH reais que cheguem depois dos decoys são preservados e encaminhados ao `sshd`; os headers HTTP não são encaminhados. O fluxo legado da opção 1 permanece separado. O texto de status é o configurado na flag `-s`. WebSocket usa os códigos/reason phrases exigidos pelo protocolo. Dados TCP desconhecidos são encaminhados pelo fallback local. SOCKS4/5 só permitem CONNECT à porta 22; o cliente não pode escolher host ou porta arbitrários.
+Com o modo ligado, o serviço detecta SOCKS4/SOCKS4a, conexões TLS encaminhadas ao handler compatível legado, WebSocket RFC 6455, SECURITY, HTTP e SSH direto. Esse TLS legado não é o transporte HCR plain do submenu **CONFIGURAR PORTAS**. No HTTP/SSH_PROXY, o dispatcher envia a sequência multi-status esperada pelo cliente (`101 <status>`, `101 <status>`, `200 <status>`), remove os blocos HTTP camuflados do preâmbulo — inclusive payloads encadeadas com `GET`, `GET-` e `UNLOCK` — e mantém o relay bidirecional. Bytes SSH reais que cheguem depois dos decoys são preservados e encaminhados ao `sshd`; os headers HTTP não são encaminhados. O fluxo legado de ABRIR PORTA permanece separado. O texto de status é o configurado na flag `-s`. WebSocket usa os códigos/reason phrases exigidos pelo protocolo. Dados TCP desconhecidos são encaminhados pelo fallback local. SOCKS4/5 só permitem CONNECT à porta 22; o cliente não pode escolher host ou porta arbitrários.
 
 O estado é individual por porta, no marcador `/opt/mpro/multiprotocol-<porta>.enabled`. Ativar uma porta que não tenha OpenSSH na 22 e, quando aplicável, VPN/OpenVPN na 1194 fará o respectivo protocolo falhar; verifique os serviços locais antes de testar. O listener UDP existente apenas registra datagramas e QUIC continua sem listener funcional; a opção 7 ativa despacho TCP, não transforma esses componentes em serviços UDP/QUIC.
 

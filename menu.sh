@@ -11,6 +11,7 @@ BYPASS_DIR="/opt/mpro"
 LEGACY_MULTIPROTOCOL_FLAG="${BYPASS_DIR}/multiprotocol.enabled"
 SYSTEMD_DIR="/etc/systemd/system"
 LANGUAGE_FILE="${BYPASS_DIR}/language"
+HCR_BINARY_CANDIDATES=("${BYPASS_DIR}/hcr-server" "/usr/local/bin/hcr-server" "/usr/bin/hcr-server")
 
 # Cores
 RED='\033[0;31m'
@@ -46,7 +47,7 @@ language_text() {
         en:multiprotocol) printf 'MULTIPROTOCOL:' ;;
         en:active) printf 'ACTIVE' ;;
         en:offline) printf 'OFFLINE' ;;
-        en:open_port) printf 'OPEN PORT' ;;
+        en:open_port) printf 'CONFIGURE PORTS' ;;
         en:close_port) printf 'CLOSE OPEN PORT' ;;
         en:restart_port) printf 'RESTART PORT' ;;
         en:xhttp) printf 'XHTTP + SSL TUNNEL' ;;
@@ -101,7 +102,7 @@ language_text() {
         es:multiprotocol) printf 'MULTIPROTOCOLO:' ;;
         es:active) printf 'ACTIVO' ;;
         es:offline) printf 'DESCONECTADO' ;;
-        es:open_port) printf 'ABRIR PUERTO' ;;
+        es:open_port) printf 'CONFIGURAR PUERTOS' ;;
         es:close_port) printf 'CERRAR PUERTO ABIERTO' ;;
         es:restart_port) printf 'REINICIAR PUERTO' ;;
         es:xhttp) printf 'XHTTP + TÚNEL SSL' ;;
@@ -156,7 +157,7 @@ language_text() {
         pt-BR:multiprotocol) printf 'MULTIPROTOCOLO:' ;;
         pt-BR:active) printf 'ATIVO' ;;
         pt-BR:offline) printf 'OFFLINE' ;;
-        pt-BR:open_port) printf 'ABRIR PORTA' ;;
+        pt-BR:open_port) printf 'CONFIGURAR PORTAS' ;;
         pt-BR:close_port) printf 'FECHAR PORTA ABERTA' ;;
         pt-BR:restart_port) printf 'REINICIAR PORTA' ;;
         pt-BR:xhttp) printf 'XHTTP + SSL TUNNEL' ;;
@@ -292,6 +293,7 @@ show_active_ports() {
     ACTIVE=""
     XHTTP_ACTIVE=false
     INTEGRATED_ACTIVE=false
+    HCR_ACTIVE=false
 
     for service_file in ${SYSTEMD_DIR}/proxy-*.service; do
         if [ -f "$service_file" ]; then
@@ -307,6 +309,7 @@ show_active_ports() {
             fi
         fi
     done
+    systemctl is-active --quiet "hcr-8880.service" 2>/dev/null && HCR_ACTIVE=true
 
     local ports_str=""
     if [ -n "$ACTIVE" ]; then
@@ -317,6 +320,9 @@ show_active_ports() {
     fi
     if [ "$INTEGRATED_ACTIVE" = true ]; then
         ports_str="${ports_str}${ports_str:+ }${AQUA}INTEGRADO${NC}"
+    fi
+    if [ "$HCR_ACTIVE" = true ]; then
+        ports_str="${ports_str}${ports_str:+ }${AQUA}HCR:8880${NC}"
     fi
     if [ -z "$ports_str" ]; then
         ports_str="${RED}$( [[ "$LANGUAGE" == "en" ]] && echo none || [[ "$LANGUAGE" == "es" ]] && echo ninguno || echo nenhuma )${NC}"
@@ -420,6 +426,126 @@ open_port() {
     systemctl start "proxy-${PORT}.service" 2>/dev/null
     sleep 2
     read -p "Enter pra continuar..."
+}
+
+hcr_binary_path() {
+    local candidate
+    for candidate in "${HCR_BINARY_CANDIDATES[@]}"; do
+        if [[ -x "$candidate" ]]; then
+            printf '%s' "$candidate"
+            return 0
+        fi
+    done
+    return 1
+}
+
+hcr_open_port() {
+    local PORT="8880" SERVICE="hcr-8880.service" BINARY SERVICE_FILE="${SYSTEMD_DIR}/hcr-8880.service"
+    clear
+    show_banner
+    echo ""
+    box_top
+    box_line "${WHITE}${BOLD}HCR ABRIR PORTA${NC}"
+    box_mid
+    box_line "Transporte: plain (sem TLS)"
+    box_line "Porta padrão: ${PORT}"
+    box_bottom
+    echo ""
+
+    if [[ "$EUID" -ne 0 ]]; then
+        echo -e "${RED}Execute o menu como root para iniciar o servidor HCR.${NC}"
+        read -r -p "Enter para continuar..." _
+        return 1
+    fi
+    if ! command -v systemctl >/dev/null 2>&1; then
+        echo -e "${RED}systemctl não encontrado; não foi possível iniciar o HCR.${NC}"
+        read -r -p "Enter para continuar..." _
+        return 1
+    fi
+    if ! BINARY=$(hcr_binary_path); then
+        echo -e "${YELLOW}Servidor HCR oficial não instalado.${NC}"
+        echo "Coloque o binário oficial hcr-server em ${BYPASS_DIR}/hcr-server ou /usr/local/bin/hcr-server."
+        read -r -p "Enter para continuar..." _
+        return 1
+    fi
+    if systemctl is-active --quiet "$SERVICE" 2>/dev/null; then
+        echo -e "${GREEN}HCR já está ativo na porta ${PORT}.${NC}"
+        read -r -p "Enter para continuar..." _
+        return 0
+    fi
+    if [[ -e "$SERVICE_FILE" ]]; then
+        echo -e "${YELLOW}${SERVICE_FILE} já existe e não está ativo; não vou sobrescrever sua configuração.${NC}"
+        read -r -p "Enter para continuar..." _
+        return 1
+    fi
+    if systemctl is-active --quiet "proxy-${PORT}.service" 2>/dev/null || \
+       ss -lntH 2>/dev/null | awk '{print $4}' | grep -Eq ":${PORT}$"; then
+        echo -e "${RED}A porta ${PORT} já está em uso.${NC}"
+        read -r -p "Enter para continuar..." _
+        return 1
+    fi
+
+    cat > "$SERVICE_FILE" <<EOF
+[Unit]
+Description=HCR Server - Porta ${PORT} (plain)
+After=network.target
+Conflicts=proxy-${PORT}.service
+
+[Service]
+Type=simple
+ExecStart=${BINARY} --port ${PORT} --transport plain
+Restart=on-failure
+RestartSec=5
+User=root
+WorkingDirectory=${BYPASS_DIR}
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+    if ! systemctl daemon-reload; then
+        rm -f -- "$SERVICE_FILE"
+        echo -e "${RED}Falha ao recarregar systemd; serviço HCR não iniciado.${NC}"
+        read -r -p "Enter para continuar..." _
+        return 1
+    fi
+    if systemctl enable --now "$SERVICE"; then
+        echo -e "${GREEN}HCR iniciado na porta ${PORT} com transporte plain (sem TLS).${NC}"
+    else
+        echo -e "${RED}Falha ao iniciar ${SERVICE}. Consulte: journalctl -u ${SERVICE} -n 50${NC}"
+        systemctl disable --now "$SERVICE" >/dev/null 2>&1 || true
+        rm -f -- "$SERVICE_FILE"
+        systemctl daemon-reload >/dev/null 2>&1 || true
+        read -r -p "Enter para continuar..." _
+        return 1
+    fi
+    read -r -p "Enter para continuar..." _
+}
+
+configure_ports() {
+    local ACTION LANGUAGE
+    while true; do
+        clear
+        LANGUAGE="$(get_language)"
+        show_banner
+        echo ""
+        box_top
+        box_line "${WHITE}${BOLD}$(language_text open_port "$LANGUAGE")${NC}"
+        box_mid
+        box_line "${WHITE}[01]${NC} - ABRIR PORTA"
+        box_line "${WHITE}[02]${NC} - HCR ABRIR PORTA (8880 / PLAIN)"
+        box_mid
+        box_line "${WHITE}[00]${NC} - $(language_text back "$LANGUAGE")"
+        box_bottom
+        echo ""
+        read -r -p "$(language_text choose "$LANGUAGE") " ACTION
+        case "$ACTION" in
+            01|1) open_port ;;
+            02|2) hcr_open_port ;;
+            00|0|"") return ;;
+            *) ;;
+        esac
+    done
 }
 
 open_xhttp() {
@@ -1107,7 +1233,7 @@ while true; do
     show_menu
     read OPTION
     case $OPTION in
-        01|1) open_port ;;
+        01|1) configure_ports ;;
         02|2) close_port ;;
         03|3) restart_port ;;
         04|4) manage_special_service "XHTTP + SSL TUNNEL" "proxy-443.service" open_xhttp ;;
