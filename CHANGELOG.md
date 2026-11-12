@@ -1,5 +1,15 @@
 # Mpro - Changelog
 
+## v3.8.2 - Conexões persistentes e keep-alive
+
+### Corrigido
+- Ativado `SO_KEEPALIVE` com probes TCP a cada 20 segundos, intervalo de 10 segundos e até 6 tentativas para manter conexões ociosas detectáveis e reduzir quedas silenciosas em redes móveis/NAT.
+- Sessões xHTTP agora podem permanecer ativas por até 24 horas em vez de serem encerradas após 10 minutos sem leitura do backend.
+- Uploads xHTTP em redes móveis ganharam tolerância de 120 segundos por bloco, evitando reconexões causadas por pausas curtas durante o envio.
+
+### Observação
+- Keep-alive evita encerramento silencioso quando a rota continua disponível, mas não pode impedir um cliente, CDN, operadora ou NAT de impor seu próprio limite de 120 segundos. Nesses casos o cliente precisa enviar seus próprios keep-alives de SSH/xHTTP.
+
 ## v3.8.1 - Correção do atraso no início do túnel
 
 ### Corrigido

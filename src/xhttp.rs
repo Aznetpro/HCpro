@@ -5,6 +5,9 @@ use tokio::net::{TcpListener, TcpStream};
 use tokio::sync::{mpsc, Mutex, RwLock};
 use tokio::time::{timeout, Duration};
 
+const XHTTP_SESSION_READ_TIMEOUT: Duration = Duration::from_secs(24 * 60 * 60);
+const XHTTP_UPLOAD_READ_TIMEOUT: Duration = Duration::from_secs(120);
+
 use tokio_rustls::rustls::{self, Certificate, PrivateKey};
 use tokio_rustls::TlsAcceptor;
 
@@ -170,7 +173,7 @@ async fn handle_xhttp_get_tls(tls: &mut tokio_rustls::server::TlsStream<TcpStrea
     let act_c = act.clone();
     tokio::spawn(async move { while let Some(d) = prx.recv().await { if !*act_c.read().await { break; } let _ = sw.write_all(&d).await; } });
     let gtx_c = gtx.clone();
-    tokio::spawn(async move { let mut b = vec![0u8; 64 * 1024]; while let Ok(Ok(n)) = timeout(Duration::from_secs(600), sr.read(&mut b)).await { if n == 0 || gtx_c.send(b[..n].to_vec()).await.is_err() { break; } } });
+    tokio::spawn(async move { let mut b = vec![0u8; 64 * 1024]; while let Ok(Ok(n)) = timeout(XHTTP_SESSION_READ_TIMEOUT, sr.read(&mut b)).await { if n == 0 || gtx_c.send(b[..n].to_vec()).await.is_err() { break; } } });
     let resp = format!("HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\nX-Session-ID: {}\r\nX-Status: {}\r\n\r\n", sid, status);
     tls.write_all(resp.as_bytes()).await.map_err(|e| Box::new(e) as XhttpError)?;
     while let Some(d) = grx.recv().await {
@@ -190,7 +193,7 @@ async fn handle_xhttp_get_raw(stream: &mut TcpStream, path: &str, status: &str, 
     SESSIONS.lock().await.insert(sid.clone(), XhttpSession { post_tx: ptx, get_tx: gtx.clone(), active: Arc::new(RwLock::new(true)) });
     tokio::spawn(async move { while let Some(d) = prx.recv().await { let _ = sw.write_all(&d).await; } });
     let gtx_c = gtx.clone();
-    tokio::spawn(async move { let mut b = vec![0u8; 64 * 1024]; while let Ok(Ok(n)) = timeout(Duration::from_secs(600), sr.read(&mut b)).await { if n == 0 || gtx_c.send(b[..n].to_vec()).await.is_err() { break; } } });
+    tokio::spawn(async move { let mut b = vec![0u8; 64 * 1024]; while let Ok(Ok(n)) = timeout(XHTTP_SESSION_READ_TIMEOUT, sr.read(&mut b)).await { if n == 0 || gtx_c.send(b[..n].to_vec()).await.is_err() { break; } } });
     let resp = format!("HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\nX-Session-ID: {}\r\nX-Status: {}\r\n\r\n", sid, status);
     stream.write_all(resp.as_bytes()).await.map_err(|e| Box::new(e) as XhttpError)?;
     while let Some(d) = grx.recv().await {
@@ -208,7 +211,7 @@ async fn handle_xhttp_post_tls(tls: &mut tokio_rustls::server::TlsStream<TcpStre
     let mut body = req[h_end..].to_vec();
     while body.len() < cl {
         let mut b = vec![0u8; cl - body.len()];
-        let n = timeout(Duration::from_secs(5), tls.read(&mut b)).await.map_err(|_| Box::new(std::io::Error::new(std::io::ErrorKind::TimedOut, "POST Read Timeout")) as XhttpError)?.map_err(|e| Box::new(e) as XhttpError)?;
+        let n = timeout(XHTTP_UPLOAD_READ_TIMEOUT, tls.read(&mut b)).await.map_err(|_| Box::new(std::io::Error::new(std::io::ErrorKind::TimedOut, "POST Read Timeout")) as XhttpError)?.map_err(|e| Box::new(e) as XhttpError)?;
         if n == 0 { break; }
         body.extend_from_slice(&b[..n]);
     }
@@ -224,7 +227,7 @@ async fn handle_xhttp_post_raw(stream: &mut TcpStream, req: &[u8], path: &str, _
     let mut body = req[h_end..].to_vec();
     while body.len() < cl {
         let mut b = vec![0u8; cl - body.len()];
-        let n = timeout(Duration::from_secs(5), stream.read(&mut b)).await.map_err(|_| Box::new(std::io::Error::new(std::io::ErrorKind::TimedOut, "POST Read Timeout")) as XhttpError)?.map_err(|e| Box::new(e) as XhttpError)?;
+        let n = timeout(XHTTP_UPLOAD_READ_TIMEOUT, stream.read(&mut b)).await.map_err(|_| Box::new(std::io::Error::new(std::io::ErrorKind::TimedOut, "POST Read Timeout")) as XhttpError)?.map_err(|e| Box::new(e) as XhttpError)?;
         if n == 0 { break; }
         body.extend_from_slice(&b[..n]);
     }

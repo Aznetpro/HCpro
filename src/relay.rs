@@ -5,6 +5,9 @@ use tokio::net::TcpStream;
 /// downloads/uploads longos, sem criar um buffer gigante por conexão.
 const RELAY_BUFFER_SIZE: usize = 128 * 1024;
 const SOCKET_BUFFER_SIZE: libc::c_int = 512 * 1024;
+const TCP_KEEPIDLE_SECS: libc::c_int = 20;
+const TCP_KEEPINTVL_SECS: libc::c_int = 10;
+const TCP_KEEPCNT: libc::c_int = 6;
 
 /// Ajustes seguros para túneis TCP interativos e transferências contínuas.
 ///
@@ -38,6 +41,35 @@ pub fn tune_tcp_stream(stream: &TcpStream) {
             libc::TCP_QUICKACK,
             &quickack as *const _ as *const libc::c_void,
             std::mem::size_of_val(&quickack) as libc::socklen_t,
+        );
+        let keepalive: libc::c_int = 1;
+        let _ = libc::setsockopt(
+            fd,
+            libc::SOL_SOCKET,
+            libc::SO_KEEPALIVE,
+            &keepalive as *const _ as *const libc::c_void,
+            std::mem::size_of_val(&keepalive) as libc::socklen_t,
+        );
+        let _ = libc::setsockopt(
+            fd,
+            libc::IPPROTO_TCP,
+            libc::TCP_KEEPIDLE,
+            &TCP_KEEPIDLE_SECS as *const _ as *const libc::c_void,
+            std::mem::size_of_val(&TCP_KEEPIDLE_SECS) as libc::socklen_t,
+        );
+        let _ = libc::setsockopt(
+            fd,
+            libc::IPPROTO_TCP,
+            libc::TCP_KEEPINTVL,
+            &TCP_KEEPINTVL_SECS as *const _ as *const libc::c_void,
+            std::mem::size_of_val(&TCP_KEEPINTVL_SECS) as libc::socklen_t,
+        );
+        let _ = libc::setsockopt(
+            fd,
+            libc::IPPROTO_TCP,
+            libc::TCP_KEEPCNT,
+            &TCP_KEEPCNT as *const _ as *const libc::c_void,
+            std::mem::size_of_val(&TCP_KEEPCNT) as libc::socklen_t,
         );
     }
 }
