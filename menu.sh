@@ -10,6 +10,7 @@ LKPROXY_INTEGRATED="/opt/mpro/proxy-integrated"
 BYPASS_DIR="/opt/mpro"
 LEGACY_MULTIPROTOCOL_FLAG="${BYPASS_DIR}/multiprotocol.enabled"
 SYSTEMD_DIR="/etc/systemd/system"
+LANGUAGE_FILE="${BYPASS_DIR}/language"
 
 # Cores
 RED='\033[0;31m'
@@ -636,6 +637,52 @@ run_update_step() {
     return "$RESULT"
 }
 
+language_menu() {
+    local CURRENT="pt-BR" CHOICE NEW_LANGUAGE
+    [[ -f "$LANGUAGE_FILE" ]] && CURRENT=$(cat "$LANGUAGE_FILE")
+
+    while true; do
+        clear
+        show_banner
+        echo ""
+        box_top
+        box_line "${CYAN}${BOLD}MUDAR IDIOMA / CHANGE LANGUAGE${NC}"
+        box_mid
+        if [[ "$CURRENT" == "pt-BR" ]]; then
+            box_line "${WHITE}1 • Português (Brasil)${NC} ${LIGHT_GREEN}(atual)${NC}"
+        else
+            box_line "${WHITE}1 • Português (Brasil)${NC}"
+        fi
+        if [[ "$CURRENT" == "en" ]]; then
+            box_line "${WHITE}2 • English${NC} ${LIGHT_GREEN}(current)${NC}"
+        else
+            box_line "${WHITE}2 • English${NC}"
+        fi
+        if [[ "$CURRENT" == "es" ]]; then
+            box_line "${WHITE}3 • Español${NC} ${LIGHT_GREEN}(actual)${NC}"
+        else
+            box_line "${WHITE}3 • Español${NC}"
+        fi
+        box_mid
+        box_line "${RED}0 • Voltar${NC}"
+        box_bottom
+        echo ""
+        read -r -p "Selecione uma opção [0-3]: " CHOICE
+
+        case "$CHOICE" in
+            1) NEW_LANGUAGE="pt-BR" ;;
+            2) NEW_LANGUAGE="en" ;;
+            3) NEW_LANGUAGE="es" ;;
+            0|"") return ;;
+            *) continue ;;
+        esac
+
+        mkdir -p "$BYPASS_DIR"
+        printf '%s\n' "$NEW_LANGUAGE" > "$LANGUAGE_FILE"
+        CURRENT="$NEW_LANGUAGE"
+    done
+}
+
 update_from_github() {
     local CONFIRM="" UPDATE_SCRIPT="" UPDATE_RESULT=0
     clear
@@ -837,6 +884,7 @@ show_menu() {
     box_line "${WHITE}[06]${NC} ${GREEN}- ATUALIZAR PELO GITHUB${NC}"
     box_line "${WHITE}[07]${NC} ${GREEN}- MULTIPROTOCOLO + STATUS${NC}"
     box_line "${RED}[08]${NC} ${GREEN}- DESINSTALAR AZPRO${NC}"
+    box_line "${WHITE}[09]${NC} ${GREEN}- IDIOMA / LANGUAGE${NC}"
     box_line ""
     box_line "${WHITE}[00]${NC} - SAIR"
     box_bottom
@@ -856,6 +904,7 @@ while true; do
         06|6) update_from_github ;;
         07|7) manage_multiprotocol ;;
         08|8) uninstall_proxy ;;
+        09|9) language_menu ;;
         00|0) echo "👋 Saindo..."; exit 0 ;;
         *) sleep 1 ;;
     esac
