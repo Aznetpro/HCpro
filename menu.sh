@@ -92,9 +92,9 @@ has_active_azpro_service() {
 
 show_execution_status() {
     if has_active_azpro_service; then
-        box_line "Status: EM EXECUÇÃO (${LIGHT_GREEN}ONLINE${NC})"
+        box_line "Status: EM EXECUÇÃO • ${LIGHT_GREEN}ONLINE ◉${NC}"
     else
-        box_line "Status: EM EXECUÇÃO (${RED}OFFLINE${NC})"
+        box_line "Status: EM EXECUÇÃO • ${RED}OFFLINE ○${NC}"
     fi
 }
 
