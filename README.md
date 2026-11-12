@@ -160,12 +160,6 @@ Com o modo ligado, o serviço detecta SOCKS4/SOCKS4a, HCR TLS (SSH dentro de TLS
 
 O estado é individual por porta, no marcador `/opt/mpro/multiprotocol-<porta>.enabled`. Ativar uma porta que não tenha OpenSSH na 22 e, quando aplicável, VPN/OpenVPN na 1194 fará o respectivo protocolo falhar; verifique os serviços locais antes de testar. O listener UDP existente apenas registra datagramas e QUIC continua sem listener funcional; a opção 7 ativa despacho TCP, não transforma esses componentes em serviços UDP/QUIC.
 
-## Opção 08 — Servidor HCR por porta
+## Opção 08 — Desinstalar Proxy
 
-A opção **[08] SERVIDOR HCR** gerencia instâncias independentes do binário oficial `hcr-server`. Ela não transforma o dispatcher multiprotocolo em HCR e não deve compartilhar uma porta com `proxy-<porta>.service`. O binário deve existir e ser executável em `/opt/mpro/hcr-server`, `/usr/local/bin/hcr-server` ou `/usr/bin/hcr-server`.
-
-Ao ativar uma porta, o menu cria `hcr-<porta>.service` com `--port <porta> --transport plain`, habilita o serviço no systemd e recusa portas já ocupadas. O instalador oficial do HCR precisa ser obtido separadamente; o Azpro não baixa nem redistribui esse binário. Depois, no HTTP Custom, selecione o transporte HCR e use a porta do serviço HCR.
-
-## Opção 09 — Desinstalar Proxy
-
-A opção **[09] DESINSTALAR PROXY** exige execução como root. O menu explica: digite `s` para desinstalar ou `n` para cancelar; somente `s` ou `S` confirma. Ela para e desabilita somente os serviços systemd cuja linha `ExecStart` aponta para os binários Azpro em `/opt/mpro`, remove os links instalados em `/usr/local/bin` quando ainda apontam para o Azpro e apaga os binários, menu, certificados TLS e marcadores BYPASS/legados conhecidos. Não remove OpenSSH, Rust, OpenSSL, regras de firewall nem arquivos desconhecidos que estejam em `/opt/mpro`; se sobrarem arquivos, o diretório é preservado.
+A opção **[08] DESINSTALAR PROXY** exige execução como root. O menu explica: digite `s` para desinstalar ou `n` para cancelar; somente `s` ou `S` confirma. Ela para e desabilita somente os serviços systemd cuja linha `ExecStart` aponta para os binários Azpro em `/opt/mpro`, remove os links instalados em `/usr/local/bin` quando ainda apontam para o Azpro e apaga os binários, menu, certificados TLS e marcadores BYPASS/legados conhecidos. Não remove OpenSSH, Rust, OpenSSL, regras de firewall nem arquivos desconhecidos que estejam em `/opt/mpro`; se sobrarem arquivos, o diretório é preservado.
