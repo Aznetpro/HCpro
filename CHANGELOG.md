@@ -1,5 +1,11 @@
 # Mpro - Changelog
 
+## v3.8.1 - Correção do atraso no início do túnel
+
+### Corrigido
+- O fluxo HTTP legado descartava o primeiro pacote recebido e depois fazia um `peek` com timeout de até 1 segundo para selecionar SSH/VPN. Agora o pacote é preservado, usado para selecionar o backend e encaminhado imediatamente.
+- O primeiro buffer do túnel legado foi ampliado para 16 KiB, evitando perda de dados quando o cliente envia o início do payload junto.
+
 ## v3.8.0 - Throughput e latência de túnel
 
 ### Otimizações
