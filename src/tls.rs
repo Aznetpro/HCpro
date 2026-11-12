@@ -80,7 +80,7 @@ pub async fn handle_hcr(socket: TcpStream) -> Result<()> {
 fn build_server_config(cert_path: &str, key_path: &str) -> Result<rustls::ServerConfig> {
     let cert_file = std::fs::File::open(cert_path)?;
     let mut cert_reader = std::io::BufReader::new(cert_file);
-    let certs = rustls_pemfile::certs(&mut cert_reader)?
+    let certs: Vec<Certificate> = rustls_pemfile::certs(&mut cert_reader)?
         .into_iter()
         .map(Certificate)
         .collect();
