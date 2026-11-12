@@ -87,7 +87,7 @@ async fn start_http(
     loop {
         match listener.accept().await {
             Ok((client_stream, addr)) => {
-                let _ = client_stream.set_nodelay(true);
+                relay::tune_tcp_stream(&client_stream);
                 enable_quickack(&client_stream);
                 let status = status_arc.clone();
                 tokio::spawn(async move {
@@ -220,7 +220,7 @@ async fn handle_legacy_http_tunnel(
     ssh_only: bool,
     force_ssh: bool,
 ) -> Result<(), Error> {
-    client_stream.set_nodelay(true)?;
+    relay::tune_tcp_stream(&client_stream);
     client_stream
         .write_all(&http_status_response(101, status))
         .await?;
@@ -252,7 +252,7 @@ async fn handle_multiprotocol_http_tunnel(
     status: &str,
     _ssh_only: bool,
 ) -> Result<(), Error> {
-    client_stream.set_nodelay(true)?;
+    relay::tune_tcp_stream(&client_stream);
     client_stream
         .write_all(&http_switching_response())
         .await?;
@@ -317,7 +317,7 @@ async fn relay_to_backend_legacy(mut client_stream: TcpStream, addr: &str) -> Re
     let mut server_stream = timeout(Duration::from_secs(3), TcpStream::connect(addr))
         .await
         .map_err(|_| Error::new(ErrorKind::TimedOut, "timeout conectando backend"))??;
-    server_stream.set_nodelay(true)?;
+    relay::tune_tcp_stream(&server_stream);
     enable_quickack(&server_stream);
     let _ = relay::copy_bidirectional(&mut client_stream, &mut server_stream).await;
     Ok(())
@@ -326,7 +326,8 @@ async fn relay_to_backend_legacy(mut client_stream: TcpStream, addr: &str) -> Re
 const MAX_HTTP_PREAMBLE: usize = 16 * 1024;
 // Payloads com [split] podem chegar em escritas TCP separadas, especialmente
 // em redes móveis. Aguarde os fragmentos seguintes antes de iniciar o relay.
-const HTTP_PREAMBLE_IDLE: Duration = Duration::from_millis(750);
+// Janela curta para fragmentos móveis sem adicionar 750 ms a cada conexão.
+const HTTP_PREAMBLE_IDLE: Duration = Duration::from_millis(200);
 
 async fn read_http_preamble(stream: &mut TcpStream) -> Result<Vec<u8>, Error> {
     let mut buffered = Vec::with_capacity(2048);
@@ -428,7 +429,7 @@ async fn relay_to_backend(
     let mut server_stream = timeout(Duration::from_secs(3), TcpStream::connect(addr))
         .await
         .map_err(|_| Error::new(ErrorKind::TimedOut, "timeout conectando backend"))??;
-    server_stream.set_nodelay(true)?;
+    relay::tune_tcp_stream(&server_stream);
     enable_quickack(&server_stream);
     if !initial_payload.is_empty() {
         server_stream.write_all(initial_payload).await?;

@@ -1,5 +1,17 @@
 # Mpro - Changelog
 
+## v3.8.0 - Throughput e latência de túnel
+
+### Otimizações
+- Relay TCP com buffers de 128 KiB por direção, reduzindo syscalls em downloads e uploads longos sem criar buffers gigantes por conexão.
+- Tuning TCP centralizado: `TCP_NODELAY`, buffers de socket de até 512 KiB e `TCP_QUICKACK` no Linux, aplicado ao cliente e ao backend SSH/VPN.
+- WebSocket e xHTTP passaram a usar buffers de leitura maiores para downloads e menos operações de escrita desnecessárias.
+- Removidos `flush()` redundantes do fluxo de chunks xHTTP; `write_all()` já entrega os dados ao socket TCP.
+- Janela de espera do preâmbulo HTTP fragmentado reduzida de 750 ms para 200 ms, preservando tolerância a redes móveis e reduzindo latência de início do túnel.
+
+### Observação
+- Essas mudanças reduzem atraso introduzido pelo servidor e melhoram throughput. O ping mínimo entre aparelho e VPS continua limitado pela distância, rota e qualidade da operadora; nenhum ajuste de código consegue eliminar essa latência física.
+
 ## v3.7.0 - HCR com instalação automática
 
 ### Novo

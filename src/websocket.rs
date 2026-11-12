@@ -147,7 +147,7 @@ async fn write_frame<W: AsyncWrite + Unpin>(
 async fn bridge(client: TcpStream, ssh: TcpStream) -> io::Result<()> {
     let (mut client_reader, mut client_writer) = client.into_split();
     let (mut ssh_reader, mut ssh_writer) = ssh.into_split();
-    let mut ssh_buffer = [0u8; 8192];
+    let mut ssh_buffer = [0u8; 64 * 1024];
     let mut fragmented_message = false;
 
     loop {
@@ -220,7 +220,7 @@ async fn read_headers(client: &mut TcpStream) -> io::Result<Vec<u8>> {
 
 /// WebSocket RFC 6455 com túnel de destino fixo para SSH local.
 pub async fn handle_websocket(mut client: TcpStream, _status: &str) -> Result<()> {
-    client.set_nodelay(true)?;
+    crate::relay::tune_tcp_stream(&client);
     let request = match timeout(Duration::from_secs(5), read_headers(&mut client)).await {
         Ok(Ok(request)) => request,
         Ok(Err(error)) => {
@@ -255,7 +255,7 @@ pub async fn handle_websocket(mut client: TcpStream, _status: &str) -> Result<()
             bail!("backend SSH local indisponivel");
         }
     };
-    ssh.set_nodelay(true)?;
+    crate::relay::tune_tcp_stream(&ssh);
 
     let response = format!(
         "HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Accept: {}\r\n\r\n",

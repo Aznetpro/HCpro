@@ -37,6 +37,7 @@ async fn main() -> Result<(), XhttpError> {
     loop {
         match listener.accept().await {
             Ok((client_stream, addr)) => {
+                crate::relay::tune_tcp_stream(&client_stream);
                 let status = status_arc.clone();
                 tokio::spawn(async move {
                     if let Err(e) = handle_xhttp_client(client_stream, &status, ssh_port).await {
@@ -52,6 +53,7 @@ async fn main() -> Result<(), XhttpError> {
 }
 
 async fn handle_xhttp_client(stream: TcpStream, status: &str, ssh_port: u16) -> Result<(), XhttpError> {
+    crate::relay::tune_tcp_stream(&stream);
     let mut peek_buf = [0u8; 3];
     let peek_result = timeout(Duration::from_secs(10), stream.peek(&mut peek_buf)).await;
     let bytes_peeked = match peek_result {
@@ -74,6 +76,7 @@ async fn handle_xhttp_client(stream: TcpStream, status: &str, ssh_port: u16) -> 
 }
 
 async fn handle_tls_dual(stream: TcpStream, status: &str, ssh_port: u16) -> Result<(), XhttpError> {
+    crate::relay::tune_tcp_stream(&stream);
     let cert_path = "/opt/mpro/cert.pem";
     let key_path = "/opt/mpro/key.pem";
 
@@ -110,7 +113,7 @@ async fn handle_tls_dual(stream: TcpStream, status: &str, ssh_port: u16) -> Resu
 }
 
 async fn handle_http_dual_raw(mut stream: TcpStream, status: &str, ssh_port: u16) -> Result<(), XhttpError> {
-    let mut buf = vec![0u8; 8192];
+    let mut buf = vec![0u8; 16 * 1024];
     let n = stream.read(&mut buf).await.map_err(|e| Box::new(e) as XhttpError)?;
     let http_str = String::from_utf8_lossy(&buf[..n]);
     
@@ -130,6 +133,7 @@ async fn handle_http_dual_raw(mut stream: TcpStream, status: &str, ssh_port: u16
     }
     
     let mut ssh = timeout(Duration::from_secs(5), TcpStream::connect(format!("127.0.0.1:{}", ssh_port))).await.map_err(|_| Box::new(std::io::Error::new(std::io::ErrorKind::TimedOut, "SSH Connect Timeout")) as XhttpError)?.map_err(|e| Box::new(e) as XhttpError)?;
+    crate::relay::tune_tcp_stream(&ssh);
     let (mut r, mut w) = stream.into_split();
     let (mut sr, mut sw) = ssh.into_split();
     let _ = tokio::join!(tokio::io::copy(&mut r, &mut sw), tokio::io::copy(&mut sr, &mut w));
@@ -138,6 +142,7 @@ async fn handle_http_dual_raw(mut stream: TcpStream, status: &str, ssh_port: u16
 
 async fn handle_ssh_direct(mut stream: TcpStream, ssh_port: u16) -> Result<(), XhttpError> {
     let mut ssh = timeout(Duration::from_secs(5), TcpStream::connect(format!("127.0.0.1:{}", ssh_port))).await.map_err(|_| Box::new(std::io::Error::new(std::io::ErrorKind::TimedOut, "SSH Connect Timeout")) as XhttpError)?.map_err(|e| Box::new(e) as XhttpError)?;
+    crate::relay::tune_tcp_stream(&ssh);
     let (mut r, mut w) = stream.into_split();
     let (mut sr, mut sw) = ssh.into_split();
     let _ = tokio::join!(tokio::io::copy(&mut r, &mut sw), tokio::io::copy(&mut sr, &mut w));
@@ -146,6 +151,7 @@ async fn handle_ssh_direct(mut stream: TcpStream, ssh_port: u16) -> Result<(), X
 
 async fn handle_ssh_direct_tls(tls_stream: tokio_rustls::server::TlsStream<TcpStream>, ssh_port: u16, initial_data: Option<Vec<u8>>) -> Result<(), XhttpError> {
     let mut ssh = timeout(Duration::from_secs(5), TcpStream::connect(format!("127.0.0.1:{}", ssh_port))).await.map_err(|_| Box::new(std::io::Error::new(std::io::ErrorKind::TimedOut, "SSH Connect Timeout")) as XhttpError)?.map_err(|e| Box::new(e) as XhttpError)?;
+    crate::relay::tune_tcp_stream(&ssh);
     if let Some(data) = initial_data { ssh.write_all(&data).await.map_err(|e| Box::new(e) as XhttpError)?; }
     let (mut r, mut w) = tokio::io::split(tls_stream);
     let (mut sr, mut sw) = ssh.into_split();
@@ -164,14 +170,13 @@ async fn handle_xhttp_get_tls(tls: &mut tokio_rustls::server::TlsStream<TcpStrea
     let act_c = act.clone();
     tokio::spawn(async move { while let Some(d) = prx.recv().await { if !*act_c.read().await { break; } let _ = sw.write_all(&d).await; } });
     let gtx_c = gtx.clone();
-    tokio::spawn(async move { let mut b = vec![0u8; 16384]; while let Ok(Ok(n)) = timeout(Duration::from_secs(600), sr.read(&mut b)).await { if n == 0 || gtx_c.send(b[..n].to_vec()).await.is_err() { break; } } });
+    tokio::spawn(async move { let mut b = vec![0u8; 64 * 1024]; while let Ok(Ok(n)) = timeout(Duration::from_secs(600), sr.read(&mut b)).await { if n == 0 || gtx_c.send(b[..n].to_vec()).await.is_err() { break; } } });
     let resp = format!("HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\nX-Session-ID: {}\r\nX-Status: {}\r\n\r\n", sid, status);
     tls.write_all(resp.as_bytes()).await.map_err(|e| Box::new(e) as XhttpError)?;
     while let Some(d) = grx.recv().await {
         if tls.write_all(format!("{:x}\r\n", d.len()).as_bytes()).await.is_err() { break; }
         if tls.write_all(&d).await.is_err() { break; }
         if tls.write_all(b"\r\n").await.is_err() { break; }
-        let _ = tls.flush().await;
     }
     Ok(())
 }
@@ -185,14 +190,13 @@ async fn handle_xhttp_get_raw(stream: &mut TcpStream, path: &str, status: &str, 
     SESSIONS.lock().await.insert(sid.clone(), XhttpSession { post_tx: ptx, get_tx: gtx.clone(), active: Arc::new(RwLock::new(true)) });
     tokio::spawn(async move { while let Some(d) = prx.recv().await { let _ = sw.write_all(&d).await; } });
     let gtx_c = gtx.clone();
-    tokio::spawn(async move { let mut b = vec![0u8; 16384]; while let Ok(Ok(n)) = timeout(Duration::from_secs(600), sr.read(&mut b)).await { if n == 0 || gtx_c.send(b[..n].to_vec()).await.is_err() { break; } } });
+    tokio::spawn(async move { let mut b = vec![0u8; 64 * 1024]; while let Ok(Ok(n)) = timeout(Duration::from_secs(600), sr.read(&mut b)).await { if n == 0 || gtx_c.send(b[..n].to_vec()).await.is_err() { break; } } });
     let resp = format!("HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\nX-Session-ID: {}\r\nX-Status: {}\r\n\r\n", sid, status);
     stream.write_all(resp.as_bytes()).await.map_err(|e| Box::new(e) as XhttpError)?;
     while let Some(d) = grx.recv().await {
         if stream.write_all(format!("{:x}\r\n", d.len()).as_bytes()).await.is_err() { break; }
         if stream.write_all(&d).await.is_err() { break; }
         if stream.write_all(b"\r\n").await.is_err() { break; }
-        let _ = stream.flush().await;
     }
     Ok(())
 }
