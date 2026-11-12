@@ -27,6 +27,72 @@ NC='\033[0m'
 
 BOX_WIDTH=46
 
+get_language() {
+    local LANGUAGE="pt-BR"
+    if [[ -f "$LANGUAGE_FILE" ]]; then
+        LANGUAGE=$(cat "$LANGUAGE_FILE")
+    fi
+    case "$LANGUAGE" in
+        pt-BR|en|es) printf '%s' "$LANGUAGE" ;;
+        *) printf 'pt-BR' ;;
+    esac
+}
+
+language_text() {
+    local KEY="$1" LANGUAGE="${2:-$(get_language)}"
+    case "${LANGUAGE}:${KEY}" in
+        en:running) printf 'RUNNING' ;;
+        en:active_ports) printf 'Active port(s):' ;;
+        en:multiprotocol) printf 'MULTIPROTOCOL:' ;;
+        en:active) printf 'ACTIVE' ;;
+        en:offline) printf 'OFFLINE' ;;
+        en:open_port) printf 'OPEN PORT' ;;
+        en:close_port) printf 'CLOSE OPEN PORT' ;;
+        en:restart_port) printf 'RESTART PORT' ;;
+        en:xhttp) printf 'XHTTP + SSL TUNNEL' ;;
+        en:integrated) printf 'INTEGRATED PROTOCOL' ;;
+        en:update) printf 'UPDATE FROM GITHUB' ;;
+        en:status) printf 'MULTIPROTOCOL + STATUS' ;;
+        en:uninstall) printf 'UNINSTALL AZPRO' ;;
+        en:language) printf 'LANGUAGE / IDIOMA' ;;
+        en:exit) printf 'EXIT' ;;
+        en:choose) printf 'Choose an option:' ;;
+        es:running) printf 'EN EJECUCIÓN' ;;
+        es:active_ports) printf 'Puerto(s) activo(s):' ;;
+        es:multiprotocol) printf 'MULTIPROTOCOLO:' ;;
+        es:active) printf 'ACTIVO' ;;
+        es:offline) printf 'DESCONECTADO' ;;
+        es:open_port) printf 'ABRIR PUERTO' ;;
+        es:close_port) printf 'CERRAR PUERTO ABIERTO' ;;
+        es:restart_port) printf 'REINICIAR PUERTO' ;;
+        es:xhttp) printf 'XHTTP + TÚNEL SSL' ;;
+        es:integrated) printf 'PROTOCOLO INTEGRADO' ;;
+        es:update) printf 'ACTUALIZAR DESDE GITHUB' ;;
+        es:status) printf 'MULTIPROTOCOLO + ESTADO' ;;
+        es:uninstall) printf 'DESINSTALAR AZPRO' ;;
+        es:language) printf 'IDIOMA / LANGUAGE' ;;
+        es:exit) printf 'SALIR' ;;
+        es:choose) printf 'Seleccione una opción:' ;;
+        pt-BR:running) printf 'EM EXECUÇÃO' ;;
+        pt-BR:active_ports) printf 'Porta(s) ativa(s):' ;;
+        pt-BR:multiprotocol) printf 'MULTIPROTOCOLO:' ;;
+        pt-BR:active) printf 'ATIVO' ;;
+        pt-BR:offline) printf 'OFFLINE' ;;
+        pt-BR:open_port) printf 'ABRIR PORTA' ;;
+        pt-BR:close_port) printf 'FECHAR PORTA ABERTA' ;;
+        pt-BR:restart_port) printf 'REINICIAR PORTA' ;;
+        pt-BR:xhttp) printf 'XHTTP + SSL TUNNEL' ;;
+        pt-BR:integrated) printf 'PROTOCOLO INTEGRADO' ;;
+        pt-BR:update) printf 'ATUALIZAR PELO GITHUB' ;;
+        pt-BR:status) printf 'MULTIPROTOCOLO + STATUS' ;;
+        pt-BR:uninstall) printf 'DESINSTALAR AZPRO' ;;
+        pt-BR:language) printf 'IDIOMA / LANGUAGE' ;;
+        pt-BR:exit) printf 'SAIR' ;;
+        pt-BR:choose) printf 'Escolha uma opção:' ;;
+        *) printf '%s' "$KEY" ;;
+    esac
+}
+
 strip_len() {
     local clean
     clean=$(echo -ne "$1" | sed -r 's/\x1B\[[0-9;]*[mK]//g')
@@ -92,14 +158,16 @@ has_active_azpro_service() {
 }
 
 show_execution_status() {
+    local LANGUAGE="$(get_language)"
     if has_active_azpro_service; then
-        box_line "Status: EM EXECUÇÃO • ${LIGHT_GREEN}ONLINE ◉${NC}"
+        box_line "Status: $(language_text running "$LANGUAGE") • ${LIGHT_GREEN}ONLINE ◉${NC}"
     else
-        box_line "Status: EM EXECUÇÃO • ${RED}OFFLINE ○${NC}"
+        box_line "Status: $(language_text running "$LANGUAGE") • ${RED}$(language_text offline "$LANGUAGE") ○${NC}"
     fi
 }
 
 show_active_ports() {
+    local LANGUAGE="$(get_language)"
     ACTIVE=""
     XHTTP_ACTIVE=false
     INTEGRATED_ACTIVE=false
@@ -130,14 +198,14 @@ show_active_ports() {
         ports_str="${ports_str}${ports_str:+ }${AQUA}INTEGRADO${NC}"
     fi
     if [ -z "$ports_str" ]; then
-        ports_str="${RED}nenhuma${NC}"
+        ports_str="${RED}$( [[ "$LANGUAGE" == "en" ]] && echo none || [[ "$LANGUAGE" == "es" ]] && echo ninguno || echo nenhuma )${NC}"
     fi
 
-    box_line "${LIGHT_GREEN}Porta(s) ativa(s):${NC} ${ports_str}"
+    box_line "${LIGHT_GREEN}$(language_text active_ports "$LANGUAGE")${NC} ${ports_str}"
     if has_any_multiprotocol_enabled; then
-        box_line "${CYAN}MULTIPROTOCOLO:${NC} ${LIGHT_GREEN}ATIVO${NC}"
+        box_line "${CYAN}$(language_text multiprotocol "$LANGUAGE")${NC} ${LIGHT_GREEN}$(language_text active "$LANGUAGE")${NC}"
     else
-        box_line "${CYAN}MULTIPROTOCOLO:${NC} ${RED}OFFLINE${NC}"
+        box_line "${CYAN}$(language_text multiprotocol "$LANGUAGE")${NC} ${RED}$(language_text offline "$LANGUAGE")${NC}"
     fi
 }
 
@@ -868,6 +936,7 @@ uninstall_proxy() {
 }
 
 show_menu() {
+    local LANGUAGE="$(get_language)"
     clear
     show_banner
     echo ""
@@ -876,20 +945,20 @@ show_menu() {
     box_mid
     show_active_ports
     box_mid
-    box_line "${WHITE}[01]${NC} ${GREEN}- ABRIR PORTA${NC}"
-    box_line "${WHITE}[02]${NC} ${GREEN}- FECHAR PORTA ABERTA${NC}"
-    box_line "${WHITE}[03]${NC} ${GREEN}- REINICIAR PORTA${NC}"
-    box_line "${WHITE}[04]${NC} ${GREEN}- XHTTP + SSL TUNNEL${NC}"
-    box_line "${WHITE}[05]${NC} ${GREEN}- PROTOCOLO INTEGRADO${NC}"
-    box_line "${WHITE}[06]${NC} ${GREEN}- ATUALIZAR PELO GITHUB${NC}"
-    box_line "${WHITE}[07]${NC} ${GREEN}- MULTIPROTOCOLO + STATUS${NC}"
-    box_line "${RED}[08]${NC} ${GREEN}- DESINSTALAR AZPRO${NC}"
-    box_line "${WHITE}[09]${NC} ${GREEN}- IDIOMA / LANGUAGE${NC}"
+    box_line "${WHITE}[01]${NC} ${GREEN}- $(language_text open_port "$LANGUAGE")${NC}"
+    box_line "${WHITE}[02]${NC} ${GREEN}- $(language_text close_port "$LANGUAGE")${NC}"
+    box_line "${WHITE}[03]${NC} ${GREEN}- $(language_text restart_port "$LANGUAGE")${NC}"
+    box_line "${WHITE}[04]${NC} ${GREEN}- $(language_text xhttp "$LANGUAGE")${NC}"
+    box_line "${WHITE}[05]${NC} ${GREEN}- $(language_text integrated "$LANGUAGE")${NC}"
+    box_line "${WHITE}[06]${NC} ${GREEN}- $(language_text update "$LANGUAGE")${NC}"
+    box_line "${WHITE}[07]${NC} ${GREEN}- $(language_text status "$LANGUAGE")${NC}"
+    box_line "${RED}[08]${NC} ${GREEN}- $(language_text uninstall "$LANGUAGE")${NC}"
+    box_line "${WHITE}[09]${NC} ${GREEN}- $(language_text language "$LANGUAGE")${NC}"
     box_line ""
-    box_line "${WHITE}[00]${NC} - SAIR"
+    box_line "${WHITE}[00]${NC} - $(language_text exit "$LANGUAGE")"
     box_bottom
     echo ""
-    echo -n "Escolha uma opção: "
+    echo -n "$(language_text choose "$LANGUAGE") "
 }
 
 while true; do
